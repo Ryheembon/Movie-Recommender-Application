@@ -30,9 +30,17 @@ document.addEventListener('click', (e) => {
 // Fetch and display content for different rows
 async function fetchContent(endpoint, containerId) {
     try {
+        console.log('Fetching content from:', `${config.BASE_URL}${endpoint}`);
+        console.log('Using API key:', config.API_KEY);
+        
         const response = await fetch(`${config.BASE_URL}${endpoint}?api_key=${config.API_KEY}&language=en-US`);
+        console.log('Response status:', response.status);
+        
         const data = await response.json();
+        console.log('Response data:', data);
+        
         if (data.results && data.results.length > 0) {
+            console.log(`Found ${data.results.length} results for ${endpoint}`);
             displayContent(data.results, containerId);
         } else {
             console.error('No results found for:', endpoint);
@@ -44,12 +52,14 @@ async function fetchContent(endpoint, containerId) {
 
 // Display content in a row
 function displayContent(movies, containerId) {
+    console.log('Displaying content in container:', containerId);
     const container = document.getElementById(containerId);
     if (!container) {
         console.error('Container not found:', containerId);
         return;
     }
 
+    console.log('Movies to display:', movies);
     container.innerHTML = movies.map(movie => `
         <div class="movie-card" data-id="${movie.id}">
             <img src="${movie.poster_path ? config.IMAGE_BASE_URL + '/w500' + movie.poster_path : 'https://via.placeholder.com/500x750?text=No+Image'}" 

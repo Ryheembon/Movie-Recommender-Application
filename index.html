@@ -3,67 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Recommender</title>
+    <title>CineMatch - Your Personal Movie Recommender</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Movie Recommender</h1>
-        </header>
-
-        <div class="tabs">
-            <button class="tab-btn active" data-tab="random">Random Movies</button>
-            <button class="tab-btn" data-tab="recommendations">Movie Recommendations</button>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <h1 class="logo">CineMatch</h1>
         </div>
-
-        <!-- Random Movies Tab -->
-        <div class="tab-content active" id="random-tab">
-            <div class="genre-selector">
-                <label for="genre">Select Genre:</label>
-                <select id="genre">
-                    <option value="">Choose a genre...</option>
-                    <option value="28">Action</option>
-                    <option value="12">Adventure</option>
-                    <option value="16">Animation</option>
-                    <option value="35">Comedy</option>
-                    <option value="80">Crime</option>
-                    <option value="18">Drama</option>
-                    <option value="14">Fantasy</option>
-                    <option value="27">Horror</option>
-                    <option value="10749">Romance</option>
-                    <option value="878">Sci-Fi</option>
-                </select>
-                <button id="getRandomMovies" class="primary-btn">Get Random Movies</button>
-            </div>
-            <div id="randomMoviesDisplay" class="movies-display"></div>
+        <div class="navbar-links">
+            <a href="#" class="active">Home</a>
+            <a href="#">Discover</a>
+            <a href="#">My Recommendations</a>
+            <a href="#">New & Popular</a>
+            <a href="#">My Watchlist</a>
         </div>
-
-        <!-- Recommendations Tab -->
-        <div class="tab-content" id="recommendations-tab">
-            <div class="liked-movies-section">
-                <h2>Movies You've Liked</h2>
-                <div id="likedMoviesDisplay" class="movies-display"></div>
+        <div class="navbar-right">
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search movies...">
             </div>
-
-            <div class="search-section">
-                <h2>Search for Movies to Like</h2>
-                <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="Enter movie title...">
-                    <button id="searchButton" class="primary-btn">Search</button>
-                </div>
-                <div id="searchResults" class="movies-display"></div>
-            </div>
-
-            <div class="recommendations-section">
-                <h2>Your Recommendations</h2>
-                <button id="getRecommendations" class="primary-btn">Get Recommendations</button>
-                <div id="recommendationsDisplay" class="movies-display"></div>
+            <div class="user-profile">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png" alt="Profile">
             </div>
         </div>
+    </nav>
 
-        <div id="status" class="status-bar"></div>
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-content">
+            <h1>Welcome to CineMatch</h1>
+            <p>Your personal AI-powered movie recommendation engine</p>
+            <div class="hero-buttons">
+                <button class="btn-primary"><i class="fas fa-film"></i> Get Recommendations</button>
+                <button class="btn-secondary"><i class="fas fa-info-circle"></i> How It Works</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Featured Content Row -->
+        <section class="content-row featured">
+            <h2>Recommended for You</h2>
+            <div class="row-content" id="featuredContent">
+                <!-- Content will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Trending Now -->
+        <section class="content-row">
+            <h2>Trending Movies</h2>
+            <div class="row-content" id="trendingContent">
+                <!-- Content will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Continue Watching -->
+        <section class="content-row">
+            <h2>Your Watchlist</h2>
+            <div class="row-content" id="continueWatching">
+                <!-- Content will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Popular on CineMatch -->
+        <section class="content-row">
+            <h2>Popular Picks</h2>
+            <div class="row-content" id="popularContent">
+                <!-- Content will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- New Releases -->
+        <section class="content-row">
+            <h2>New Releases</h2>
+            <div class="row-content" id="newReleases">
+                <!-- Content will be dynamically added here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Movie Details Modal -->
+    <div id="movieModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="modal-body">
+                <!-- Content will be dynamically added here -->
+            </div>
+        </div>
     </div>
+
     <script src="app.js"></script>
 </body>
 </html> 

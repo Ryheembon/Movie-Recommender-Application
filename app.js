@@ -35,9 +35,13 @@ document.addEventListener('click', (e) => {
 // Fetch and display content for different rows
 async function fetchContent(endpoint, containerId) {
     try {
-        const response = await fetch(`${BASE_URL}${endpoint}?api_key=${API_KEY}`);
+        const response = await fetch(`${BASE_URL}${endpoint}?api_key=${API_KEY}&language=en-US`);
         const data = await response.json();
-        displayContent(data.results, containerId);
+        if (data.results && data.results.length > 0) {
+            displayContent(data.results, containerId);
+        } else {
+            console.error('No results found for:', endpoint);
+        }
     } catch (error) {
         console.error('Error fetching content:', error);
     }
@@ -46,12 +50,19 @@ async function fetchContent(endpoint, containerId) {
 // Display content in a row
 function displayContent(movies, containerId) {
     const container = document.getElementById(containerId);
+    if (!container) {
+        console.error('Container not found:', containerId);
+        return;
+    }
+
     container.innerHTML = movies.map(movie => `
         <div class="movie-card" data-id="${movie.id}">
-            <img src="${IMAGE_BASE_URL}/w500${movie.poster_path}" alt="${movie.title}">
+            <img src="${movie.poster_path ? IMAGE_BASE_URL + '/w500' + movie.poster_path : 'https://via.placeholder.com/500x750?text=No+Image'}" 
+                 alt="${movie.title}"
+                 onerror="this.src='https://via.placeholder.com/500x750?text=No+Image'">
             <div class="movie-info">
                 <h3>${movie.title}</h3>
-                <p>${movie.release_date.split('-')[0]}</p>
+                <p>${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
             </div>
         </div>
     `).join('');
@@ -65,20 +76,22 @@ function displayContent(movies, containerId) {
 // Show movie details in modal
 async function showMovieDetails(movieId) {
     try {
-        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}`);
+        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&append_to_response=credits,videos`);
         const movie = await response.json();
         
         modalBody.innerHTML = `
             <div class="movie-details">
                 <div class="movie-header">
-                    <img src="${IMAGE_BASE_URL}/w500${movie.poster_path}" alt="${movie.title}">
+                    <img src="${movie.poster_path ? IMAGE_BASE_URL + '/w500' + movie.poster_path : 'https://via.placeholder.com/500x750?text=No+Image'}" 
+                         alt="${movie.title}"
+                         onerror="this.src='https://via.placeholder.com/500x750?text=No+Image'">
                     <div class="movie-info">
                         <h2>${movie.title}</h2>
-                        <p class="release-date">${movie.release_date.split('-')[0]}</p>
-                        <p class="overview">${movie.overview}</p>
+                        <p class="release-date">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
+                        <p class="overview">${movie.overview || 'No overview available.'}</p>
                         <div class="movie-stats">
-                            <span>Rating: ${movie.vote_average}/10</span>
-                            <span>Runtime: ${movie.runtime} min</span>
+                            <span>Rating: ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}/10</span>
+                            <span>Runtime: ${movie.runtime ? movie.runtime + ' min' : 'N/A'}</span>
                         </div>
                         <div class="movie-actions">
                             <button class="btn-primary"><i class="fas fa-play"></i> Play</button>
@@ -110,7 +123,7 @@ window.addEventListener('click', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     // Fetch content for different rows
     fetchContent('/movie/now_playing', 'featuredContent');
-    fetchContent('/movie/trending', 'trendingContent');
+    fetchContent('/trending/movie/week', 'trendingContent');
     fetchContent('/movie/popular', 'popularContent');
     fetchContent('/movie/upcoming', 'newReleases');
     
@@ -130,9 +143,11 @@ searchInput.addEventListener('input', (e) => {
     if (query.length > 2) {
         searchTimeout = setTimeout(async () => {
             try {
-                const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}`);
+                const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}&language=en-US`);
                 const data = await response.json();
-                displayContent(data.results, 'searchResults');
+                if (data.results && data.results.length > 0) {
+                    displayContent(data.results, 'searchResults');
+                }
             } catch (error) {
                 console.error('Error searching movies:', error);
             }

@@ -6,16 +6,6 @@
     <title>CineMatch - Your Personal Movie Recommender</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Configuration -->
-    <script>
-        const config = {
-            API_KEY: 'af767ffb2843b0a2bbb887d1af1a162d',
-            BASE_URL: 'https://api.themoviedb.org/3',
-            IMAGE_BASE_URL: 'https://image.tmdb.org/t/p'
-        };
-    </script>
-    <!-- Scripts -->
-    <script src="app.js" defer></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -27,13 +17,13 @@
             <a href="#" class="active">Home</a>
             <a href="#">Discover</a>
             <a href="#">My Recommendations</a>
-            <a href="#">New & Popular</a>
+            <a href="#">Genres</a>
             <a href="#">My Watchlist</a>
         </div>
         <div class="navbar-right">
             <div class="search-container">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search movies...">
+                <input type="text" class="search-input" placeholder="Search movies...">
             </div>
             <div class="user-profile">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png" alt="Profile">
@@ -47,7 +37,8 @@
             <h1>Welcome to CineMatch</h1>
             <p>Your personal AI-powered movie recommendation engine</p>
             <div class="hero-buttons">
-                <button class="btn-primary"><i class="fas fa-film"></i> Get Recommendations</button>
+                <button class="btn-primary" id="getRecommendations"><i class="fas fa-film"></i> Get Recommendations</button>
+                <button class="btn-secondary" id="selectGenres"><i class="fas fa-tags"></i> Select Your Genres</button>
                 <button class="btn-secondary"><i class="fas fa-info-circle"></i> How It Works</button>
             </div>
         </div>
@@ -56,7 +47,7 @@
     <!-- Main Content -->
     <main>
         <!-- Featured Content Row -->
-        <section class="content-row featured">
+        <section class="content-row">
             <h2>Recommended for You</h2>
             <div class="row-content" id="featuredContent">
                 <!-- Content will be dynamically added here -->
@@ -66,8 +57,16 @@
         <!-- Trending Now -->
         <section class="content-row">
             <h2>Trending Movies</h2>
-            <div class="row-content" id="trendingContent">
+            <div class="row-content" id="trendingNow">
                 <!-- Content will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Genres Section -->
+        <section class="content-row">
+            <h2>Browse by Genre</h2>
+            <div class="row-content" id="genres">
+                <!-- Genres will be dynamically added here -->
             </div>
         </section>
 
@@ -82,7 +81,7 @@
         <!-- Popular on CineMatch -->
         <section class="content-row">
             <h2>Popular Picks</h2>
-            <div class="row-content" id="popularContent">
+            <div class="row-content" id="popularOnCineMatch">
                 <!-- Content will be dynamically added here -->
             </div>
         </section>
@@ -99,11 +98,38 @@
     <!-- Movie Details Modal -->
     <div id="movieModal" class="modal">
         <div class="modal-content">
-            <span class="close">&times;</span>
+            <span class="modal-close">&times;</span>
             <div class="modal-body">
                 <!-- Content will be dynamically added here -->
             </div>
         </div>
     </div>
+
+    <!-- Genre Selection Modal -->
+    <div id="genreModal" class="modal">
+        <div class="modal-content genre-modal">
+            <span class="modal-close">&times;</span>
+            <div class="modal-body">
+                <h2>Select Your Favorite Genres</h2>
+                <p>Choose at least 3 genres to get personalized recommendations</p>
+                <div class="genre-selection-grid" id="genreSelectionGrid">
+                    <!-- Genres will be dynamically added here -->
+                </div>
+                <div class="genre-selection-actions">
+                    <button class="btn-primary" id="saveGenres" disabled>Save Preferences</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // TMDb API Configuration
+        const config = {
+            API_KEY: 'af767ffb2843b0a2bbb887d1af1a162d',
+            BASE_URL: 'https://api.themoviedb.org/3',
+            IMAGE_BASE_URL: 'https://image.tmdb.org/t/p'
+        };
+    </script>
+    <script src="app.js"></script>
 </body>
 </html> 

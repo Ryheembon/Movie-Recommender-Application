@@ -382,36 +382,75 @@ main {
 /* Streaming Section */
 .streaming-section {
     margin: 2rem 0;
-    padding: 1rem;
+    padding: 1.5rem;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
 }
 
 .streaming-section h3 {
-    margin-bottom: 1rem;
-    color: var(--netflix-light);
+    margin-bottom: 1.5rem;
+    color: var(--cinematch-light);
+    font-size: 1.5rem;
 }
 
-.streaming-providers {
+.provider-group {
+    margin-bottom: 1.5rem;
+}
+
+.provider-group h4 {
+    color: var(--cinematch-accent);
+    margin-bottom: 1rem;
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 0.5rem;
 }
 
+.provider-group h4 i {
+    font-size: 1.2rem;
+}
+
+.provider-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
 .provider {
-    padding: 0.5rem 1rem;
-    background: var(--netflix-red);
-    color: white;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    transition: transform 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    transition: transform 0.2s ease;
 }
 
 .provider:hover {
-    transform: scale(1.05);
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.15);
 }
 
-/* Responsive Design */
+.provider img {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.provider span {
+    font-size: 0.8rem;
+    color: var(--cinematch-light);
+    text-align: center;
+}
+
+.no-providers {
+    text-align: center;
+    color: var(--cinematch-gray);
+    font-style: italic;
+}
+
+/* Mobile Responsive Adjustments */
 @media (max-width: 768px) {
     .navbar-links {
         display: none;
@@ -441,6 +480,28 @@ main {
         width: 100%;
         height: auto;
         max-height: 400px;
+    }
+
+    .streaming-section {
+        padding: 1rem;
+    }
+
+    .provider-list {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.8rem;
+    }
+
+    .provider {
+        padding: 0.6rem;
+    }
+
+    .provider img {
+        width: 32px;
+        height: 32px;
+    }
+
+    .provider span {
+        font-size: 0.7rem;
     }
 }
 

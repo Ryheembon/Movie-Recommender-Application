@@ -328,7 +328,7 @@ async function updateWatchlist() {
 async function showMovieDetails(movieId) {
     try {
         setLoading('movieModal', true);
-        const response = await fetch(`${config.BASE_URL}/movie/${movieId}?api_key=${config.API_KEY}&append_to_response=videos,similar`);
+        const response = await fetch(`${config.BASE_URL}/movie/${movieId}?api_key=${config.API_KEY}&append_to_response=videos,similar,watch/providers`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -349,6 +349,12 @@ async function showMovieDetails(movieId) {
 
         // Get similar movies
         const similarMovies = movie.similar?.results || [];
+
+        // Get streaming providers
+        const providers = movie['watch/providers']?.results || {};
+        const flatrate = providers.flatrate || [];
+        const rent = providers.rent || [];
+        const buy = providers.buy || [];
 
         const posterPath = movie.poster_path 
             ? `${config.IMAGE_BASE_URL}/w500${movie.poster_path}`
@@ -381,6 +387,57 @@ async function showMovieDetails(movieId) {
                         <iframe width="100%" height="315" src="${trailerUrl}" frameborder="0" allowfullscreen></iframe>
                     </div>
                 ` : ''}
+                <div class="streaming-section">
+                    <h3>Where to Watch</h3>
+                    ${flatrate.length > 0 ? `
+                        <div class="provider-group">
+                            <h4><i class="fas fa-play-circle"></i> Stream</h4>
+                            <div class="provider-list">
+                                ${flatrate.map(provider => `
+                                    <div class="provider">
+                                        <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" 
+                                             alt="${provider.provider_name}"
+                                             loading="lazy">
+                                        <span>${provider.provider_name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${rent.length > 0 ? `
+                        <div class="provider-group">
+                            <h4><i class="fas fa-film"></i> Rent</h4>
+                            <div class="provider-list">
+                                ${rent.map(provider => `
+                                    <div class="provider">
+                                        <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" 
+                                             alt="${provider.provider_name}"
+                                             loading="lazy">
+                                        <span>${provider.provider_name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${buy.length > 0 ? `
+                        <div class="provider-group">
+                            <h4><i class="fas fa-shopping-cart"></i> Buy</h4>
+                            <div class="provider-list">
+                                ${buy.map(provider => `
+                                    <div class="provider">
+                                        <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" 
+                                             alt="${provider.provider_name}"
+                                             loading="lazy">
+                                        <span>${provider.provider_name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${flatrate.length === 0 && rent.length === 0 && buy.length === 0 ? `
+                        <p class="no-providers">No streaming information available for this movie.</p>
+                    ` : ''}
+                </div>
                 ${similarMovies.length > 0 ? `
                     <div class="similar-movies">
                         <h3>Similar Movies</h3>

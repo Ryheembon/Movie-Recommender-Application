@@ -2,6 +2,10 @@
 
 A modern, interactive web application for discovering and recommending movies. Built with HTML, CSS, and JavaScript.
 
+## Live Demo
+
+🎬 **Try it out**: [Movie Recommender App](https://ryheembon.github.io/Movie-Recommender-Application/)
+
 ## Features
 
 - 🎬 Browse random movies by genre
@@ -13,20 +17,16 @@ A modern, interactive web application for discovering and recommending movies. B
 - ✨ Modern UI with smooth animations
 - 💾 Persistent storage of liked movies
 
-## Live Demo
-
-[View Live Demo](https://your-username.github.io/movie-recommender)
-
 ## Setup
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/movie-recommender.git
+git clone https://github.com/Ryheembon/Movie-Recommender-Application.git
 ```
 
 2. Navigate to the project directory:
 ```bash
-cd movie-recommender
+cd Movie-Recommender-Application
 ```
 
 3. Open `index.html` in your web browser or use a local server.

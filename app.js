@@ -1,7 +1,8 @@
 // DOM Elements
 const navbar = document.querySelector('.navbar');
 const searchContainer = document.querySelector('.search-container');
-const searchInput = document.querySelector('.search-input');
+const searchInput = document.querySelector('.search-container input');
+const searchIcon = document.querySelector('.search-container i');
 const movieModal = document.getElementById('movieModal');
 const genreModal = document.getElementById('genreModal');
 const modalCloseBtn = document.querySelector('.modal-close');
@@ -60,9 +61,70 @@ window.addEventListener('scroll', () => {
     }
 });
 
-// Search functionality
-searchContainer.addEventListener('click', () => {
-    searchInput.focus();
+// Toggle search bar
+searchIcon.addEventListener('click', () => {
+    searchContainer.classList.toggle('active');
+    if (searchContainer.classList.contains('active')) {
+        searchInput.focus();
+    }
+});
+
+// Handle search
+searchInput.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+        const query = searchInput.value.trim();
+        if (query) {
+            try {
+                const response = await fetch(`${config.BASE_URL}/search/movie?api_key=${config.API_KEY}&query=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    // Clear existing content
+                    document.querySelectorAll('.content-row').forEach(row => row.remove());
+                    
+                    // Create new row for search results
+                    const searchRow = document.createElement('div');
+                    searchRow.className = 'content-row';
+                    searchRow.innerHTML = `
+                        <h2>Search Results for "${query}"</h2>
+                        <div class="movie-grid"></div>
+                    `;
+                    main.appendChild(searchRow);
+                    
+                    // Add movies to grid
+                    const movieGrid = searchRow.querySelector('.movie-grid');
+                    data.results.forEach(movie => {
+                        movieGrid.innerHTML += createMovieCard(movie);
+                    });
+                    
+                    // Add click handlers to new movie cards
+                    searchRow.querySelectorAll('.movie-card').forEach(card => {
+                        card.addEventListener('click', () => showMovieDetails(card.dataset.movieId));
+                    });
+                } else {
+                    // Show no results message
+                    const noResults = document.createElement('div');
+                    noResults.className = 'error-message';
+                    noResults.innerHTML = `
+                        <i class="fas fa-search"></i>
+                        <p>No movies found for "${query}"</p>
+                    `;
+                    main.innerHTML = '';
+                    main.appendChild(noResults);
+                }
+            } catch (error) {
+                console.error('Error searching movies:', error);
+                showError('Failed to search movies. Please try again.');
+            }
+        }
+    }
+});
+
+// Close search on click outside
+document.addEventListener('click', (e) => {
+    if (!searchContainer.contains(e.target)) {
+        searchContainer.classList.remove('active');
+    }
 });
 
 // Loading state
@@ -158,8 +220,14 @@ async function fetchMovies(endpoint, params = {}) {
 
 // Create movie card HTML
 function createMovieCard(movie) {
+    // Ensure config is available
+    if (!window.config) {
+        console.error('Config not loaded');
+        return '';
+    }
+
     const posterPath = movie.poster_path 
-        ? `${config.IMAGE_BASE_URL}/w500${movie.poster_path}`
+        ? `${window.config.IMAGE_BASE_URL}/w500${movie.poster_path}`
         : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';
     
     return `
@@ -307,16 +375,61 @@ function addToWatchlist(movieId) {
     }
 }
 
+// Add API request cache
+const apiCache = {
+    data: {},
+    timestamps: {},
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+};
+
+// Check if API cache is valid
+function isApiCacheValid(key) {
+    const timestamp = apiCache.timestamps[key];
+    if (!timestamp) return false;
+    return Date.now() - timestamp < apiCache.maxAge;
+}
+
+// Get cached API response
+function getCachedApiResponse(key) {
+    return apiCache.data[key];
+}
+
+// Cache API response
+function cacheApiResponse(key, data) {
+    apiCache.data[key] = data;
+    apiCache.timestamps[key] = Date.now();
+}
+
+// Batch fetch movies
+async function batchFetchMovies(movieIds) {
+    const uniqueIds = [...new Set(movieIds)];
+    const cacheKey = `batch_${uniqueIds.join('_')}`;
+    
+    if (isApiCacheValid(cacheKey)) {
+        return getCachedApiResponse(cacheKey);
+    }
+
+    const movies = await Promise.all(
+        uniqueIds.map(id => 
+            fetch(`${config.BASE_URL}/movie/${id}?api_key=${config.API_KEY}`)
+                .then(res => res.json())
+        )
+    );
+
+    cacheApiResponse(cacheKey, movies);
+    return movies;
+}
+
 // Update watchlist display
 async function updateWatchlist() {
     try {
         setLoading('continueWatching', true);
-        const watchlistMovies = await Promise.all(
-            userPreferences.watchlist.map(movieId => 
-                fetch(`${config.BASE_URL}/movie/${movieId}?api_key=${config.API_KEY}`)
-                    .then(res => res.json())
-            )
-        );
+        if (userPreferences.watchlist.length === 0) {
+            displayMovies('continueWatching', []);
+            return;
+        }
+        
+        const watchlistMovies = await batchFetchMovies(userPreferences.watchlist);
         displayMovies('continueWatching', watchlistMovies);
     } catch (error) {
         console.error('Error updating watchlist:', error);
@@ -324,141 +437,248 @@ async function updateWatchlist() {
     }
 }
 
+// Preload movie posters
+function preloadMoviePosters(movies) {
+    movies.forEach(movie => {
+        if (movie.poster_path) {
+            const img = new Image();
+            img.src = `${config.IMAGE_BASE_URL}/w500${movie.poster_path}`;
+        }
+    });
+}
+
+// Batch fetch additional data
+async function batchFetchAdditionalData(movieId) {
+    const cacheKey = `additional_${movieId}`;
+    
+    if (isApiCacheValid(cacheKey)) {
+        return getCachedApiResponse(cacheKey);
+    }
+
+    const [similarResponse, providersResponse] = await Promise.all([
+        fetch(`${config.BASE_URL}/movie/${movieId}/similar?api_key=${config.API_KEY}`),
+        fetch(`${config.BASE_URL}/movie/${movieId}/watch/providers?api_key=${config.API_KEY}`)
+    ]);
+
+    const similarData = await similarResponse.json();
+    const providersData = await providersResponse.json();
+
+    const result = {
+        similar: similarData.results || [],
+        providers: providersData.results || {}
+    };
+
+    cacheApiResponse(cacheKey, result);
+    return result;
+}
+
 // Show movie details in modal
 async function showMovieDetails(movieId) {
     try {
         setLoading('movieModal', true);
-        const response = await fetch(`${config.BASE_URL}/movie/${movieId}?api_key=${config.API_KEY}&append_to_response=videos,similar,watch/providers`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const movie = await response.json();
         
-        if (!movie || !movie.id) {
-            throw new Error('Invalid movie data received');
+        // Check cache first
+        const cacheKey = `movie_${movieId}`;
+        if (isApiCacheValid(cacheKey)) {
+            const cachedData = getCachedApiResponse(cacheKey);
+            if (cachedData) {
+                const trailers = cachedData.videos?.results?.filter(video => 
+                    video.type === 'Trailer' && video.site === 'YouTube'
+                ) || [];
+                
+                const trailerUrl = trailers.length > 0 
+                    ? trailers[0].key
+                    : null;
+
+                const posterPath = cachedData.poster_path 
+                    ? `${config.IMAGE_BASE_URL}/w500${cachedData.poster_path}`
+                    : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';
+
+                renderMovieDetails(cachedData, trailerUrl, posterPath);
+                return;
+            }
         }
+
+        // First, fetch just the videos to get the trailer quickly
+        const videosResponse = await fetch(`${config.BASE_URL}/movie/${movieId}/videos?api_key=${config.API_KEY}`);
+        const videosData = await videosResponse.json();
         
-        // Get trailer
-        const trailers = movie.videos?.results?.filter(video => 
+        const trailers = videosData.results?.filter(video => 
             video.type === 'Trailer' && video.site === 'YouTube'
         ) || [];
         
         const trailerUrl = trailers.length > 0 
-            ? `https://www.youtube.com/embed/${trailers[0].key}`
+            ? trailers[0].key
             : null;
 
-        // Get similar movies
-        const similarMovies = movie.similar?.results || [];
-
-        // Get streaming providers
-        const providers = movie['watch/providers']?.results || {};
-        const flatrate = providers.flatrate || [];
-        const rent = providers.rent || [];
-        const buy = providers.buy || [];
-
-        const posterPath = movie.poster_path 
-            ? `${config.IMAGE_BASE_URL}/w500${movie.poster_path}`
-            : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';
-
+        // Show initial content with just the trailer
         modalBody.innerHTML = `
             <div class="movie-details">
                 <div class="movie-header">
-                    <img src="${posterPath}" 
-                         alt="${movie.title}"
-                         onerror="this.onerror=null; this.src='https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';">
                     <div class="movie-info">
-                        <h2>${movie.title}</h2>
-                        <p class="release-date">${movie.release_date ? new Date(movie.release_date).toLocaleDateString() : 'N/A'}</p>
-                        <p class="overview">${movie.overview || 'No overview available.'}</p>
-                        <div class="movie-stats">
-                            <span><i class="fas fa-star"></i> ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</span>
-                            <span><i class="fas fa-clock"></i> ${movie.runtime ? movie.runtime + ' min' : 'N/A'}</span>
-                        </div>
-                        <div class="movie-actions">
-                            <button class="btn-add-watchlist" data-id="${movie.id}">
-                                <i class="fas fa-plus"></i> Add to Watchlist
-                            </button>
+                        <div class="loading-placeholder">
+                            <i class="fas fa-spinner fa-spin"></i>
                         </div>
                     </div>
                 </div>
                 ${trailerUrl ? `
                     <div class="trailer-section">
                         <h3>Watch Trailer</h3>
-                        <iframe width="100%" height="315" src="${trailerUrl}" frameborder="0" allowfullscreen></iframe>
-                    </div>
-                ` : ''}
-                <div class="streaming-section">
-                    <h3>Where to Watch</h3>
-                    ${flatrate.length > 0 ? `
-                        <div class="provider-group">
-                            <h4><i class="fas fa-play-circle"></i> Stream</h4>
-                            <div class="provider-list">
-                                ${flatrate.map(provider => `
-                                    <div class="provider">
-                                        <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" 
-                                             alt="${provider.provider_name}"
-                                             loading="lazy">
-                                        <span>${provider.provider_name}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${rent.length > 0 ? `
-                        <div class="provider-group">
-                            <h4><i class="fas fa-film"></i> Rent</h4>
-                            <div class="provider-list">
-                                ${rent.map(provider => `
-                                    <div class="provider">
-                                        <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" 
-                                             alt="${provider.provider_name}"
-                                             loading="lazy">
-                                        <span>${provider.provider_name}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${buy.length > 0 ? `
-                        <div class="provider-group">
-                            <h4><i class="fas fa-shopping-cart"></i> Buy</h4>
-                            <div class="provider-list">
-                                ${buy.map(provider => `
-                                    <div class="provider">
-                                        <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" 
-                                             alt="${provider.provider_name}"
-                                             loading="lazy">
-                                        <span>${provider.provider_name}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    ${flatrate.length === 0 && rent.length === 0 && buy.length === 0 ? `
-                        <p class="no-providers">No streaming information available for this movie.</p>
-                    ` : ''}
-                </div>
-                ${similarMovies.length > 0 ? `
-                    <div class="similar-movies">
-                        <h3>Similar Movies</h3>
-                        <div class="row-content">
-                            ${similarMovies.slice(0, 4).map(createMovieCard).join('')}
-                        </div>
+                        <a href="https://www.youtube.com/watch?v=${trailerUrl}" target="_blank" class="btn-primary">
+                            <i class="fas fa-play"></i> Watch on YouTube
+                        </a>
                     </div>
                 ` : ''}
             </div>
         `;
+        
         movieModal.classList.add('active');
+
+        // Add trailer play button event immediately
+        const trailerPlaceholder = modalBody.querySelector('.trailer-placeholder');
+        if (trailerPlaceholder) {
+            trailerPlaceholder.addEventListener('click', () => {
+                const trailerUrl = trailerPlaceholder.dataset.trailerUrl;
+                trailerPlaceholder.innerHTML = `
+                    <iframe width="100%" height="315" 
+                        src="${trailerUrl}" 
+                        frameborder="0" 
+                        allowfullscreen>
+                    </iframe>
+                `;
+            });
+        }
+
+        // Now fetch the rest of the movie data
+        const basicResponse = await fetch(`${config.BASE_URL}/movie/${movieId}?api_key=${config.API_KEY}`);
+        if (!basicResponse.ok) {
+            throw new Error(`HTTP error! status: ${basicResponse.status}`);
+        }
+        const movie = await basicResponse.json();
+        
+        if (!movie || !movie.id) {
+            throw new Error('Invalid movie data received');
+        }
+
+        // Cache the movie data
+        cacheApiResponse(cacheKey, movie);
+
+        const posterPath = movie.poster_path 
+            ? `${config.IMAGE_BASE_URL}/w500${movie.poster_path}`
+            : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';
+
+        // Update the modal with full movie details
+        const movieHeader = modalBody.querySelector('.movie-header');
+        if (movieHeader) {
+            movieHeader.innerHTML = `
+                <img src="${posterPath}" 
+                     alt="${movie.title}"
+                     loading="lazy"
+                     onerror="this.onerror=null; this.src='https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';">
+                <div class="movie-info">
+                    <h2>${movie.title}</h2>
+                    <p class="release-date">${movie.release_date ? new Date(movie.release_date).toLocaleDateString() : 'N/A'}</p>
+                    <p class="overview">${movie.overview || 'No overview available.'}</p>
+                    <div class="movie-stats">
+                        <span><i class="fas fa-star"></i> ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</span>
+                        <span><i class="fas fa-clock"></i> ${movie.runtime ? movie.runtime + ' min' : 'N/A'}</span>
+                    </div>
+                    <div class="movie-actions">
+                        <button class="btn-add-watchlist" data-id="${movie.id}">
+                            <i class="fas fa-plus"></i> Add to Watchlist
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
 
         // Add watchlist button event
         const watchlistBtn = modalBody.querySelector('.btn-add-watchlist');
         if (watchlistBtn) {
             watchlistBtn.addEventListener('click', () => addToWatchlist(watchlistBtn.dataset.id));
         }
+
+        // Add loading indicator for additional data
+        const trailerSection = modalBody.querySelector('.trailer-section');
+        if (trailerSection) {
+            trailerSection.insertAdjacentHTML('afterend', `
+                <div class="loading-additional">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading additional information...</p>
+                </div>
+            `);
+        }
+        
+        // Load additional data in the background
+        setTimeout(() => preloadAdditionalData(movieId), 100);
+
     } catch (error) {
         console.error('Error showing movie details:', error);
         setError('movieModal', 'Error loading movie details. Please try again.');
         movieModal.classList.remove('active');
+    }
+}
+
+// Render movie details
+function renderMovieDetails(movie, trailerUrl, posterPath) {
+    modalBody.innerHTML = `
+        <div class="movie-details">
+            <div class="movie-header">
+                <img src="${posterPath}" 
+                     alt="${movie.title}"
+                     loading="lazy"
+                     onerror="this.onerror=null; this.src='https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';">
+                <div class="movie-info">
+                    <h2>${movie.title}</h2>
+                    <p class="release-date">${movie.release_date ? new Date(movie.release_date).toLocaleDateString() : 'N/A'}</p>
+                    <p class="overview">${movie.overview || 'No overview available.'}</p>
+                    <div class="movie-stats">
+                        <span><i class="fas fa-star"></i> ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</span>
+                        <span><i class="fas fa-clock"></i> ${movie.runtime ? movie.runtime + ' min' : 'N/A'}</span>
+                    </div>
+                    <div class="movie-actions">
+                        <button class="btn-add-watchlist" data-id="${movie.id}">
+                            <i class="fas fa-plus"></i> Add to Watchlist
+                        </button>
+                    </div>
+                </div>
+            </div>
+            ${trailerUrl ? `
+                <div class="trailer-section">
+                    <h3>Watch Trailer</h3>
+                    <a href="https://www.youtube.com/watch?v=${trailerUrl}" target="_blank" class="btn-primary">
+                        <i class="fas fa-play"></i> Watch on YouTube
+                    </a>
+                </div>
+            ` : ''}
+            <div class="loading-additional">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading additional information...</p>
+            </div>
+        </div>
+    `;
+    
+    movieModal.classList.add('active');
+
+    // Add watchlist button event
+    const watchlistBtn = modalBody.querySelector('.btn-add-watchlist');
+    if (watchlistBtn) {
+        watchlistBtn.addEventListener('click', () => addToWatchlist(watchlistBtn.dataset.id));
+    }
+
+    // Add trailer play button event
+    const trailerPlaceholder = modalBody.querySelector('.trailer-placeholder');
+    if (trailerPlaceholder) {
+        trailerPlaceholder.addEventListener('click', () => {
+            const trailerUrl = trailerPlaceholder.dataset.trailerUrl;
+            trailerPlaceholder.innerHTML = `
+                <iframe width="100%" height="315" 
+                    src="${trailerUrl}" 
+                    frameborder="0" 
+                    allowfullscreen>
+                </iframe>
+            `;
+        });
     }
 }
 
@@ -611,28 +831,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Display genres
         displayGenres();
 
-        // Featured Content (recommendations)
-        setLoading('featuredContent', true);
-        const featuredMovies = await fetchMoviesWithCache('/movie/popular', {}, 'featured');
+        // Preload initial content in parallel
+        const [featuredMovies, trendingMovies, popularMovies, newReleases] = await Promise.all([
+            fetchMoviesWithCache('/movie/popular', {}, 'featured'),
+            fetchMoviesWithCache('/trending/movie/week', {}, 'trending'),
+            fetchMoviesWithCache('/movie/top_rated', {}, 'topRated'),
+            fetchMoviesWithCache('/movie/now_playing', {}, 'nowPlaying')
+        ]);
+
+        // Preload posters for all sections
+        preloadMoviePosters(featuredMovies.slice(0, 6));
+        preloadMoviePosters(trendingMovies.slice(0, 6));
+        preloadMoviePosters(popularMovies.slice(0, 6));
+        preloadMoviePosters(newReleases.slice(0, 6));
+
+        // Display content
         displayMovies('featuredContent', featuredMovies.slice(0, 6));
-
-        // Trending Now
-        setLoading('trendingNow', true);
-        const trendingMovies = await fetchMoviesWithCache('/trending/movie/week', {}, 'trending');
         displayMovies('trendingNow', trendingMovies.slice(0, 6));
+        displayMovies('popularOnCineMatch', popularMovies.slice(0, 6));
+        displayMovies('newReleases', newReleases.slice(0, 6));
 
-        // Continue Watching (watchlist)
+        // Update watchlist last since it's user-specific
         updateWatchlist();
 
-        // Popular on CineMatch
-        setLoading('popularOnCineMatch', true);
-        const popularMovies = await fetchMoviesWithCache('/movie/top_rated', {}, 'topRated');
-        displayMovies('popularOnCineMatch', popularMovies.slice(0, 6));
-
-        // New Releases
-        setLoading('newReleases', true);
-        const newReleases = await fetchMoviesWithCache('/movie/now_playing', {}, 'nowPlaying');
-        displayMovies('newReleases', newReleases.slice(0, 6));
     } catch (error) {
         console.error('Error initializing content:', error);
         setError('featuredContent', 'Error loading movies. Please refresh the page.');
@@ -773,14 +994,58 @@ window.addEventListener('scroll', debouncedScroll);
 
 // Add service worker for offline support
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('ServiceWorker registration successful');
-            })
-            .catch(err => {
-                console.log('ServiceWorker registration failed: ', err);
-            });
+    window.addEventListener('load', async () => {
+        try {
+            // Get the correct path for the service worker
+            const swPath = window.location.pathname.includes('/Movies_recommendations') 
+                ? '/Movies_recommendations/sw.js' 
+                : '/sw.js';
+            
+            console.log('Registering service worker at:', swPath);
+            const registration = await navigator.serviceWorker.register(swPath);
+            console.log('ServiceWorker registration successful:', registration);
+            
+            // Preload critical assets with correct paths
+            const criticalAssets = [
+                window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/' : '/',
+                window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/index.html' : '/index.html',
+                window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/app.js' : '/app.js',
+                window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/styles.css' : '/styles.css'
+            ];
+            
+            // Cache critical assets
+            const cache = await caches.open('movie-app-v1');
+            await cache.addAll(criticalAssets);
+            
+            // Preload movie posters for featured content
+            const featuredResponse = await fetch(`${config.BASE_URL}/movie/popular?api_key=${config.API_KEY}`);
+            const featuredData = await featuredResponse.json();
+            if (featuredData.results) {
+                featuredData.results.slice(0, 6).forEach(movie => {
+                    if (movie.poster_path) {
+                        const img = new Image();
+                        img.src = `${config.IMAGE_BASE_URL}/w500${movie.poster_path}`;
+                    }
+                });
+            }
+        } catch (err) {
+            console.warn('ServiceWorker registration failed:', err);
+            // Fallback to regular caching
+            if ('caches' in window) {
+                try {
+                    const cache = await caches.open('movie-app-v1');
+                    const fallbackAssets = [
+                        window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/' : '/',
+                        window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/index.html' : '/index.html',
+                        window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/app.js' : '/app.js',
+                        window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/styles.css' : '/styles.css'
+                    ];
+                    await cache.addAll(fallbackAssets);
+                } catch (cacheErr) {
+                    console.warn('Cache fallback failed:', cacheErr);
+                }
+            }
+        }
     });
 }
 
@@ -807,4 +1072,90 @@ window.addEventListener('load', () => {
 window.addEventListener('error', (event) => {
     performanceMetrics.errors++;
     console.error('Error:', event.error);
-}); 
+});
+
+// Preload additional data
+async function preloadAdditionalData(movieId) {
+    try {
+        const { similar, providers } = await batchFetchAdditionalData(movieId);
+        
+        // Preload posters for similar movies
+        preloadMoviePosters(similar.slice(0, 4));
+
+        const flatrate = providers.flatrate || [];
+        const rent = providers.rent || [];
+        const buy = providers.buy || [];
+
+        // Update modal with additional content
+        const loadingSection = modalBody.querySelector('.loading-additional');
+        if (loadingSection) {
+            loadingSection.outerHTML = `
+                <div class="streaming-section">
+                    <h3>Where to Watch</h3>
+                    ${flatrate.length > 0 ? `
+                        <div class="provider-group">
+                            <h4><i class="fas fa-play-circle"></i> Stream</h4>
+                            <div class="provider-list">
+                                ${flatrate.map(provider => `
+                                    <div class="provider">
+                                        <img src="https://image.tmdb.org/t/p/w92${provider.logo_path}" 
+                                             alt="${provider.provider_name}"
+                                             loading="lazy">
+                                        <span>${provider.provider_name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${rent.length > 0 ? `
+                        <div class="provider-group">
+                            <h4><i class="fas fa-film"></i> Rent</h4>
+                            <div class="provider-list">
+                                ${rent.map(provider => `
+                                    <div class="provider">
+                                        <img src="https://image.tmdb.org/t/p/w92${provider.logo_path}" 
+                                             alt="${provider.provider_name}"
+                                             loading="lazy">
+                                        <span>${provider.provider_name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${buy.length > 0 ? `
+                        <div class="provider-group">
+                            <h4><i class="fas fa-shopping-cart"></i> Buy</h4>
+                            <div class="provider-list">
+                                ${buy.map(provider => `
+                                    <div class="provider">
+                                        <img src="https://image.tmdb.org/t/p/w92${provider.logo_path}" 
+                                             alt="${provider.provider_name}"
+                                             loading="lazy">
+                                        <span>${provider.provider_name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${flatrate.length === 0 && rent.length === 0 && buy.length === 0 ? `
+                        <p class="no-providers">No streaming information available for this movie.</p>
+                    ` : ''}
+                </div>
+                ${similar.length > 0 ? `
+                    <div class="similar-movies">
+                        <h3>Similar Movies</h3>
+                        <div class="row-content">
+                            ${similar.slice(0, 4).map(createMovieCard).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading additional data:', error);
+        const loadingSection = modalBody.querySelector('.loading-additional');
+        if (loadingSection) {
+            loadingSection.innerHTML = '<p>Error loading additional information. Please try again.</p>';
+        }
+    }
+} 

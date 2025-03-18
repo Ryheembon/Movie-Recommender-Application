@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CineMatch - Your Personal Movie Recommender</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -122,14 +123,15 @@
         </div>
     </div>
 
+    <!-- TMDb API Configuration -->
     <script>
-        // TMDb API Configuration
-        const config = {
+        window.config = {
             API_KEY: 'af767ffb2843b0a2bbb887d1af1a162d',
             BASE_URL: 'https://api.themoviedb.org/3',
             IMAGE_BASE_URL: 'https://image.tmdb.org/t/p'
         };
     </script>
+    <!-- Scripts -->
     <script src="app.js"></script>
 </body>
 </html> 

@@ -112,7 +112,7 @@ body {
 .hero {
     height: 80vh;
     background: linear-gradient(rgba(26, 27, 38, 0.7), rgba(26, 27, 38, 0.7)),
-                url('https://images.unsplash.com/photo-1489599929927-2ee91cede3ba?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+                url('https://images.unsplash.com/photo-1536440136628-849c177e76a1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
     background-size: cover;
     background-position: center;
     display: flex;
@@ -171,21 +171,35 @@ body {
 }
 
 /* Content Rows */
-main {
-    padding: 20px 4%;
-    margin-top: 60vh; /* Reduced from 80vh to show content earlier */
-}
-
 .content-row {
-    margin-bottom: 40px;
-    position: relative;
+    margin-bottom: 2rem;
+    padding: 0 4%;
 }
 
 .content-row h2 {
-    font-size: 1.5rem;
-    margin-bottom: 10px;
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
     color: var(--cinematch-light);
-    padding-left: 4%;
+}
+
+/* Remove margin from last content row */
+.content-row:last-child {
+    margin-bottom: 0;
+}
+
+/* Add margin to sections that need spacing */
+.section-title {
+    margin-bottom: 2rem;
+}
+
+/* Adjust spacing for recommendation section */
+#recommendations {
+    margin-top: 2rem;
+}
+
+/* Remove extra margin from recommendation section when it's the first content row */
+.content-row:first-child {
+    margin-top: 0;
 }
 
 .row-content {
@@ -363,20 +377,38 @@ main {
 /* Trailer Section */
 .trailer-section {
     margin: 2rem 0;
-    padding: 1rem;
+    padding: 1.5rem;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
+    text-align: center;
 }
 
 .trailer-section h3 {
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     color: var(--cinematch-light);
+    font-size: 1.5rem;
 }
 
-.trailer-section iframe {
-    width: 100%;
-    aspect-ratio: 16/9;
+.trailer-section .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background-color: #FF0000;
+    color: white;
     border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.trailer-section .btn-primary:hover {
+    background-color: #CC0000;
+    transform: translateY(-2px);
+}
+
+.trailer-section .btn-primary i {
+    font-size: 1.2rem;
 }
 
 /* Streaming Section */
@@ -756,5 +788,134 @@ main {
     to {
         transform: translateX(0);
         opacity: 1;
+    }
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+        padding: 15px;
+        margin: 10px;
+    }
+
+    .modal-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .modal-header h2 {
+        font-size: 1.5rem;
+        text-align: center;
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+
+    .modal-body {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .modal-poster {
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+    }
+
+    .modal-poster img {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 2/3;
+    }
+
+    .modal-info {
+        width: 100%;
+        padding: 0;
+    }
+
+    .modal-info p {
+        font-size: 0.9rem;
+    }
+
+    .movie-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 15px;
+        padding: 20px;
+    }
+
+    .movie-card {
+        width: 100%;
+    }
+
+    .movie-poster img {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 2/3;
+    }
+
+    .movie-info h3 {
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+    }
+
+    .movie-info p {
+        font-size: 0.8rem;
+    }
+
+    .trailer-section {
+        padding: 1rem;
+    }
+
+    .trailer-section h3 {
+        font-size: 1.2rem;
+    }
+
+    .trailer-section .btn-primary {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Small Mobile Devices */
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 10px;
+    }
+
+    .modal-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .modal-info p {
+        font-size: 0.8rem;
+    }
+
+    .movie-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+
+    .movie-info h3 {
+        font-size: 0.8rem;
+    }
+
+    .movie-info p {
+        font-size: 0.7rem;
+    }
+}
+
+/* Landscape Mode */
+@media (max-height: 500px) and (orientation: landscape) {
+    .modal-content {
+        max-height: 95vh;
+    }
+
+    .movie-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     }
 } 

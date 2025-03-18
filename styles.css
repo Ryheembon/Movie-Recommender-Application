@@ -298,4 +298,14 @@ main {
     .movie-card img {
         height: 225px;
     }
+}
+
+.error-message {
+    color: var(--cinematch-primary);
+    text-align: center;
+    padding: 20px;
+    font-size: 1.1rem;
+    background: rgba(255, 75, 43, 0.1);
+    border-radius: 4px;
+    margin: 10px 0;
 } 

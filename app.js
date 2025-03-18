@@ -31,22 +31,42 @@ document.addEventListener('click', (e) => {
 async function fetchContent(endpoint, containerId) {
     try {
         console.log('Fetching content from:', `${config.BASE_URL}${endpoint}`);
-        console.log('Using API key:', config.API_KEY);
         
         const response = await fetch(`${config.BASE_URL}${endpoint}?api_key=${config.API_KEY}&language=en-US`);
         console.log('Response status:', response.status);
         
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         console.log('Response data:', data);
+        
+        if (data.success === false) {
+            console.error('API Error:', data.status_message);
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = `<div class="error-message">Error loading content: ${data.status_message}</div>`;
+            }
+            return;
+        }
         
         if (data.results && data.results.length > 0) {
             console.log(`Found ${data.results.length} results for ${endpoint}`);
             displayContent(data.results, containerId);
         } else {
             console.error('No results found for:', endpoint);
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = '<div class="error-message">No content available at the moment.</div>';
+            }
         }
     } catch (error) {
         console.error('Error fetching content:', error);
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = `<div class="error-message">Error loading content: ${error.message}</div>`;
+        }
     }
 }
 
@@ -56,6 +76,11 @@ function displayContent(movies, containerId) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error('Container not found:', containerId);
+        return;
+    }
+
+    if (!movies || movies.length === 0) {
+        container.innerHTML = '<div class="error-message">No movies available.</div>';
         return;
     }
 

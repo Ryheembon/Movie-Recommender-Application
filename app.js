@@ -159,42 +159,40 @@ function setError(containerId, message) {
 const cache = {
     data: {},
     timestamps: {},
-    maxAge: {
-        popular: 24 * 60 * 60 * 1000, // 24 hours
-        trending: 12 * 60 * 60 * 1000, // 12 hours
-        nowPlaying: 12 * 60 * 60 * 1000, // 12 hours
-        recommendations: 24 * 60 * 60 * 1000 // 24 hours
-    }
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
 };
 
 // Check if cache is valid
 function isCacheValid(key) {
     const timestamp = cache.timestamps[key];
-    const maxAge = cache.maxAge[key];
-    if (!timestamp || !maxAge) return false;
-    return Date.now() - timestamp < maxAge;
+    if (!timestamp) return false;
+    return Date.now() - timestamp < cache.maxAge;
 }
 
 // Fetch movies with cache
 async function fetchMoviesWithCache(endpoint, params = {}, cacheKey) {
     try {
-        // Check if we have valid cached data
         if (cacheKey && isCacheValid(cacheKey)) {
-            console.log(`Using cached data for ${cacheKey}`);
             return cache.data[cacheKey];
         }
 
-        const movies = await fetchMovies(endpoint, params);
+        const response = await fetch(`${config.BASE_URL}${endpoint}?${new URLSearchParams({
+            api_key: config.API_KEY,
+            language: 'en-US',
+            ...params
+        })}`);
         
-        // Update cache if we have a valid cache key
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        
         if (cacheKey) {
-            cache.data[cacheKey] = movies;
+            cache.data[cacheKey] = data.results;
             cache.timestamps[cacheKey] = Date.now();
         }
         
-        return movies;
+        return data.results;
     } catch (error) {
-        console.error(`Error fetching ${cacheKey}:`, error);
+        console.error('Error fetching movies:', error);
         return [];
     }
 }
@@ -218,31 +216,55 @@ async function fetchMovies(endpoint, params = {}) {
     }
 }
 
-// Create movie card HTML
-function createMovieCard(movie) {
-    // Ensure config is available
-    if (!window.config) {
-        console.error('Config not loaded');
-        return '';
-    }
+// Simple trailer popup function
+function showTrailer(trailerUrl) {
+    const modal = document.getElementById('movieModal');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    // Create trailer container
+    modalContent.innerHTML = `
+        <div class="modal-close">&times;</div>
+        <div class="trailer-container">
+            <iframe 
+                src="${trailerUrl}" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+            </iframe>
+        </div>
+    `;
+    
+    // Show modal
+    modal.classList.add('active');
+    
+    // Close button functionality
+    const closeBtn = modal.querySelector('.modal-close');
+    closeBtn.addEventListener('click', () => {
+        modal.classList.remove('active');
+    });
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+        }
+    });
+}
 
+// Create movie card
+function createMovieCard(movie) {
     const posterPath = movie.poster_path 
-        ? `${window.config.IMAGE_BASE_URL}/w500${movie.poster_path}`
+        ? `${config.IMAGE_BASE_URL}/w500${movie.poster_path}`
         : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';
     
     return `
         <div class="movie-card" data-movie-id="${movie.id}">
-            <div class="movie-poster">
-                <img loading="lazy" 
-                     src="${posterPath}" 
-                     alt="${movie.title}"
-                     width="500"
-                     height="750"
-                     onerror="this.onerror=null; this.src='https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';">
-            </div>
+            <img src="${posterPath}" 
+                 alt="${movie.title}"
+                 loading="lazy"
+                 onerror="this.onerror=null; this.src='https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';">
             <div class="movie-info">
                 <h3>${movie.title}</h3>
-                <p>${new Date(movie.release_date).getFullYear()}</p>
+                <p>${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'}</p>
             </div>
         </div>
     `;
@@ -279,29 +301,90 @@ function createGenreCard(genre) {
     `;
 }
 
-// Display movies in a container
+// Function to create navigation arrows
+function createNavigationArrows() {
+    return `
+        <button class="nav-arrow prev" aria-label="Previous movies">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="nav-arrow next" aria-label="Next movies">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    `;
+}
+
+// Function to handle navigation
+function setupNavigation(container) {
+    const movieGrid = container.querySelector('.movie-grid');
+    const prevBtn = container.querySelector('.nav-arrow.prev');
+    const nextBtn = container.querySelector('.nav-arrow.next');
+    
+    if (!movieGrid || !prevBtn || !nextBtn) return;
+    
+    const scrollAmount = movieGrid.offsetWidth * 0.8;
+    
+    prevBtn.addEventListener('click', () => {
+        movieGrid.scrollBy({
+            left: -scrollAmount,
+            behavior: 'smooth'
+        });
+    });
+    
+    nextBtn.addEventListener('click', () => {
+        movieGrid.scrollBy({
+            left: scrollAmount,
+            behavior: 'smooth'
+        });
+    });
+    
+    movieGrid.addEventListener('scroll', () => {
+        const isAtStart = movieGrid.scrollLeft <= 0;
+        const isAtEnd = movieGrid.scrollLeft >= (movieGrid.scrollWidth - movieGrid.offsetWidth);
+        
+        prevBtn.classList.toggle('hidden', isAtStart);
+        nextBtn.classList.toggle('hidden', isAtEnd);
+    });
+    
+    prevBtn.classList.add('hidden');
+    if (movieGrid.scrollWidth <= movieGrid.offsetWidth) {
+        nextBtn.classList.add('hidden');
+    }
+}
+
+// Display movies
 function displayMovies(containerId, movies) {
     const container = document.getElementById(containerId);
     if (!container) return;
     
     if (!movies || movies.length === 0) {
-        setError(containerId, 'No movies found');
+        container.innerHTML = `
+            <div class="error-message">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>No movies found</p>
+            </div>
+        `;
         return;
     }
     
-    container.innerHTML = movies.map(createMovieCard).join('');
+    let contentRow = container.closest('.content-row');
+    if (!contentRow) {
+        contentRow = document.createElement('div');
+        contentRow.className = 'content-row';
+        contentRow.innerHTML = `
+            <h2>${containerId.replace(/([A-Z])/g, ' $1').trim()}</h2>
+            <div class="movie-grid"></div>
+        `;
+        container.parentNode.insertBefore(contentRow, container);
+    }
     
-    // Add click events to movie cards
-    container.querySelectorAll('.movie-card').forEach(card => {
+    const movieGrid = contentRow.querySelector('.movie-grid');
+    movieGrid.innerHTML = movies.map(createMovieCard).join('');
+    
+    // Setup navigation for this section
+    setupSectionNavigation(contentRow);
+    
+    movieGrid.querySelectorAll('.movie-card').forEach(card => {
         card.addEventListener('click', () => showMovieDetails(card.dataset.movieId));
-    });
-
-    // Add watchlist button events
-    container.querySelectorAll('.btn-add-watchlist').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            addToWatchlist(btn.dataset.id);
-        });
     });
 }
 
@@ -472,213 +555,73 @@ async function batchFetchAdditionalData(movieId) {
     return result;
 }
 
-// Show movie details in modal
+// Show movie details
 async function showMovieDetails(movieId) {
     try {
-        setLoading('movieModal', true);
-        
-        // Check cache first
-        const cacheKey = `movie_${movieId}`;
-        if (isApiCacheValid(cacheKey)) {
-            const cachedData = getCachedApiResponse(cacheKey);
-            if (cachedData) {
-                const trailers = cachedData.videos?.results?.filter(video => 
-                    video.type === 'Trailer' && video.site === 'YouTube'
-                ) || [];
-                
-                const trailerUrl = trailers.length > 0 
-                    ? trailers[0].key
-                    : null;
+        modalBody.innerHTML = `
+            <div class="loading">
+                <i class="fas fa-spinner"></i>
+                <p>Loading movie details...</p>
+            </div>
+        `;
+        movieModal.classList.add('active');
 
-                const posterPath = cachedData.poster_path 
-                    ? `${config.IMAGE_BASE_URL}/w500${cachedData.poster_path}`
-                    : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';
+        const [movieData, videosData] = await Promise.all([
+            fetch(`${config.BASE_URL}/movie/${movieId}?api_key=${config.API_KEY}`).then(res => res.json()),
+            fetch(`${config.BASE_URL}/movie/${movieId}/videos?api_key=${config.API_KEY}`).then(res => res.json())
+        ]);
 
-                renderMovieDetails(cachedData, trailerUrl, posterPath);
-                return;
-            }
-        }
-
-        // First, fetch just the videos to get the trailer quickly
-        const videosResponse = await fetch(`${config.BASE_URL}/movie/${movieId}/videos?api_key=${config.API_KEY}`);
-        const videosData = await videosResponse.json();
-        
-        const trailers = videosData.results?.filter(video => 
+        const trailer = videosData.results?.find(video => 
             video.type === 'Trailer' && video.site === 'YouTube'
-        ) || [];
-        
-        const trailerUrl = trailers.length > 0 
-            ? trailers[0].key
-            : null;
+        );
 
-        // Show initial content with just the trailer
+        const posterPath = movieData.poster_path 
+            ? `${config.IMAGE_BASE_URL}/w500${movieData.poster_path}`
+            : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';
+
         modalBody.innerHTML = `
             <div class="movie-details">
                 <div class="movie-header">
+                    <img src="${posterPath}" 
+                         alt="${movieData.title}"
+                         loading="lazy"
+                         onerror="this.onerror=null; this.src='https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';">
                     <div class="movie-info">
-                        <div class="loading-placeholder">
-                            <i class="fas fa-spinner fa-spin"></i>
+                        <h2>${movieData.title}</h2>
+                        <p class="release-date">${movieData.release_date ? new Date(movieData.release_date).toLocaleDateString() : 'N/A'}</p>
+                        <p class="overview">${movieData.overview || 'No overview available.'}</p>
+                        <div class="movie-stats">
+                            <span><i class="fas fa-star"></i> ${movieData.vote_average ? movieData.vote_average.toFixed(1) : 'N/A'}</span>
+                            <span><i class="fas fa-clock"></i> ${movieData.runtime ? movieData.runtime + ' min' : 'N/A'}</span>
                         </div>
                     </div>
                 </div>
-                ${trailerUrl ? `
+                ${trailer ? `
                     <div class="trailer-section">
                         <h3>Watch Trailer</h3>
-                        <a href="https://www.youtube.com/watch?v=${trailerUrl}" target="_blank" class="btn-primary">
-                            <i class="fas fa-play"></i> Watch on YouTube
-                        </a>
+                        <div class="trailer-container">
+                            <iframe 
+                                width="100%" 
+                                height="315" 
+                                src="https://www.youtube.com/embed/${trailer.key}" 
+                                frameborder="0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen>
+                            </iframe>
+                        </div>
                     </div>
                 ` : ''}
             </div>
         `;
-        
-        movieModal.classList.add('active');
-
-        // Add trailer play button event immediately
-        const trailerPlaceholder = modalBody.querySelector('.trailer-placeholder');
-        if (trailerPlaceholder) {
-            trailerPlaceholder.addEventListener('click', () => {
-                const trailerUrl = trailerPlaceholder.dataset.trailerUrl;
-                trailerPlaceholder.innerHTML = `
-                    <iframe width="100%" height="315" 
-                        src="${trailerUrl}" 
-                        frameborder="0" 
-                        allowfullscreen>
-                    </iframe>
-                `;
-            });
-        }
-
-        // Now fetch the rest of the movie data
-        const basicResponse = await fetch(`${config.BASE_URL}/movie/${movieId}?api_key=${config.API_KEY}`);
-        if (!basicResponse.ok) {
-            throw new Error(`HTTP error! status: ${basicResponse.status}`);
-        }
-        const movie = await basicResponse.json();
-        
-        if (!movie || !movie.id) {
-            throw new Error('Invalid movie data received');
-        }
-
-        // Cache the movie data
-        cacheApiResponse(cacheKey, movie);
-
-        const posterPath = movie.poster_path 
-            ? `${config.IMAGE_BASE_URL}/w500${movie.poster_path}`
-            : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';
-
-        // Update the modal with full movie details
-        const movieHeader = modalBody.querySelector('.movie-header');
-        if (movieHeader) {
-            movieHeader.innerHTML = `
-                <img src="${posterPath}" 
-                     alt="${movie.title}"
-                     loading="lazy"
-                     onerror="this.onerror=null; this.src='https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';">
-                <div class="movie-info">
-                    <h2>${movie.title}</h2>
-                    <p class="release-date">${movie.release_date ? new Date(movie.release_date).toLocaleDateString() : 'N/A'}</p>
-                    <p class="overview">${movie.overview || 'No overview available.'}</p>
-                    <div class="movie-stats">
-                        <span><i class="fas fa-star"></i> ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</span>
-                        <span><i class="fas fa-clock"></i> ${movie.runtime ? movie.runtime + ' min' : 'N/A'}</span>
-                    </div>
-                    <div class="movie-actions">
-                        <button class="btn-add-watchlist" data-id="${movie.id}">
-                            <i class="fas fa-plus"></i> Add to Watchlist
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Add watchlist button event
-        const watchlistBtn = modalBody.querySelector('.btn-add-watchlist');
-        if (watchlistBtn) {
-            watchlistBtn.addEventListener('click', () => addToWatchlist(watchlistBtn.dataset.id));
-        }
-
-        // Add loading indicator for additional data
-        const trailerSection = modalBody.querySelector('.trailer-section');
-        if (trailerSection) {
-            trailerSection.insertAdjacentHTML('afterend', `
-                <div class="loading-additional">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>Loading additional information...</p>
-                </div>
-            `);
-        }
-        
-        // Load additional data in the background
-        setTimeout(() => preloadAdditionalData(movieId), 100);
 
     } catch (error) {
         console.error('Error showing movie details:', error);
-        setError('movieModal', 'Error loading movie details. Please try again.');
-        movieModal.classList.remove('active');
-    }
-}
-
-// Render movie details
-function renderMovieDetails(movie, trailerUrl, posterPath) {
-    modalBody.innerHTML = `
-        <div class="movie-details">
-            <div class="movie-header">
-                <img src="${posterPath}" 
-                     alt="${movie.title}"
-                     loading="lazy"
-                     onerror="this.onerror=null; this.src='https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';">
-                <div class="movie-info">
-                    <h2>${movie.title}</h2>
-                    <p class="release-date">${movie.release_date ? new Date(movie.release_date).toLocaleDateString() : 'N/A'}</p>
-                    <p class="overview">${movie.overview || 'No overview available.'}</p>
-                    <div class="movie-stats">
-                        <span><i class="fas fa-star"></i> ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</span>
-                        <span><i class="fas fa-clock"></i> ${movie.runtime ? movie.runtime + ' min' : 'N/A'}</span>
-                    </div>
-                    <div class="movie-actions">
-                        <button class="btn-add-watchlist" data-id="${movie.id}">
-                            <i class="fas fa-plus"></i> Add to Watchlist
-                        </button>
-                    </div>
-                </div>
+        modalBody.innerHTML = `
+            <div class="error-message">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>Error loading movie details. Please try again.</p>
             </div>
-            ${trailerUrl ? `
-                <div class="trailer-section">
-                    <h3>Watch Trailer</h3>
-                    <a href="https://www.youtube.com/watch?v=${trailerUrl}" target="_blank" class="btn-primary">
-                        <i class="fas fa-play"></i> Watch on YouTube
-                    </a>
-                </div>
-            ` : ''}
-            <div class="loading-additional">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>Loading additional information...</p>
-            </div>
-        </div>
-    `;
-    
-    movieModal.classList.add('active');
-
-    // Add watchlist button event
-    const watchlistBtn = modalBody.querySelector('.btn-add-watchlist');
-    if (watchlistBtn) {
-        watchlistBtn.addEventListener('click', () => addToWatchlist(watchlistBtn.dataset.id));
-    }
-
-    // Add trailer play button event
-    const trailerPlaceholder = modalBody.querySelector('.trailer-placeholder');
-    if (trailerPlaceholder) {
-        trailerPlaceholder.addEventListener('click', () => {
-            const trailerUrl = trailerPlaceholder.dataset.trailerUrl;
-            trailerPlaceholder.innerHTML = `
-                <iframe width="100%" height="315" 
-                    src="${trailerUrl}" 
-                    frameborder="0" 
-                    allowfullscreen>
-                </iframe>
-            `;
-        });
+        `;
     }
 }
 
@@ -822,113 +765,190 @@ genreModal.addEventListener('click', (e) => {
     }
 });
 
-// Initialize content
+// Function to shuffle array
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// Add loading indicator
+function showLoadingIndicator() {
+    const loader = document.createElement('div');
+    loader.className = 'loading-indicator';
+    loader.innerHTML = `
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading movies...</p>
+        </div>
+    `;
+    document.body.appendChild(loader);
+}
+
+function hideLoadingIndicator() {
+    const loader = document.querySelector('.loading-indicator');
+    if (loader) {
+        loader.remove();
+    }
+}
+
+// Function to setup recommendation section navigation
+function setupRecommendationNavigation() {
+    const recommendationSection = document.querySelector('.recommendation-section');
+    if (!recommendationSection) return;
+
+    const movieGrid = recommendationSection.querySelector('.movie-grid');
+    if (!movieGrid) return;
+
+    // Create navigation arrows
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'nav-arrow prev';
+    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    prevBtn.setAttribute('aria-label', 'Previous movies');
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'nav-arrow next';
+    nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    nextBtn.setAttribute('aria-label', 'Next movies');
+
+    // Add arrows to the section
+    recommendationSection.appendChild(prevBtn);
+    recommendationSection.appendChild(nextBtn);
+
+    // Setup scroll functionality
+    const scrollAmount = movieGrid.offsetWidth * 0.8;
+
+    prevBtn.addEventListener('click', () => {
+        movieGrid.scrollBy({
+            left: -scrollAmount,
+            behavior: 'smooth'
+        });
+    });
+
+    nextBtn.addEventListener('click', () => {
+        movieGrid.scrollBy({
+            left: scrollAmount,
+            behavior: 'smooth'
+        });
+    });
+
+    // Show/hide arrows based on scroll position
+    movieGrid.addEventListener('scroll', () => {
+        const isAtStart = movieGrid.scrollLeft <= 0;
+        const isAtEnd = movieGrid.scrollLeft >= (movieGrid.scrollWidth - movieGrid.offsetWidth);
+
+        prevBtn.classList.toggle('hidden', isAtStart);
+        nextBtn.classList.toggle('hidden', isAtEnd);
+    });
+
+    // Initial arrow visibility
+    prevBtn.classList.add('hidden');
+    if (movieGrid.scrollWidth <= movieGrid.offsetWidth) {
+        nextBtn.classList.add('hidden');
+    }
+}
+
+// Function to setup navigation for a movie section
+function setupSectionNavigation(section) {
+    const movieGrid = section.querySelector('.movie-grid');
+    if (!movieGrid) return;
+
+    // Remove existing arrows if any
+    const existingArrows = section.querySelectorAll('.nav-arrow');
+    existingArrows.forEach(arrow => arrow.remove());
+
+    // Create navigation arrows
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'nav-arrow prev';
+    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    prevBtn.setAttribute('aria-label', 'Previous movies');
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'nav-arrow next';
+    nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    nextBtn.setAttribute('aria-label', 'Next movies');
+
+    // Add arrows to the section
+    section.appendChild(prevBtn);
+    section.appendChild(nextBtn);
+
+    // Setup scroll functionality
+    const scrollAmount = movieGrid.offsetWidth * 0.8;
+
+    prevBtn.addEventListener('click', () => {
+        movieGrid.scrollBy({
+            left: -scrollAmount,
+            behavior: 'smooth'
+        });
+    });
+
+    nextBtn.addEventListener('click', () => {
+        movieGrid.scrollBy({
+            left: scrollAmount,
+            behavior: 'smooth'
+        });
+    });
+
+    // Show/hide arrows based on scroll position
+    movieGrid.addEventListener('scroll', () => {
+        const isAtStart = movieGrid.scrollLeft <= 0;
+        const isAtEnd = movieGrid.scrollLeft >= (movieGrid.scrollWidth - movieGrid.offsetWidth);
+
+        prevBtn.classList.toggle('hidden', isAtStart);
+        nextBtn.classList.toggle('hidden', isAtEnd);
+    });
+
+    // Initial arrow visibility
+    prevBtn.classList.add('hidden');
+    if (movieGrid.scrollWidth <= movieGrid.offsetWidth) {
+        nextBtn.classList.add('hidden');
+    }
+}
+
+// Update the initialization code
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        showLoadingIndicator();
+        
         // Load user preferences
         loadUserPreferences();
 
         // Display genres
         displayGenres();
 
-        // Preload initial content in parallel
+        // Fetch different movies for each section with different pages
         const [featuredMovies, trendingMovies, popularMovies, newReleases] = await Promise.all([
-            fetchMoviesWithCache('/movie/popular', {}, 'featured'),
-            fetchMoviesWithCache('/trending/movie/week', {}, 'trending'),
-            fetchMoviesWithCache('/movie/top_rated', {}, 'topRated'),
-            fetchMoviesWithCache('/movie/now_playing', {}, 'nowPlaying')
+            fetchMoviesWithCache('/movie/popular', { page: Math.floor(Math.random() * 5) + 1 }, 'featured'),
+            fetchMoviesWithCache('/trending/movie/week', { page: Math.floor(Math.random() * 5) + 1 }, 'trending'),
+            fetchMoviesWithCache('/movie/top_rated', { page: Math.floor(Math.random() * 5) + 1 }, 'topRated'),
+            fetchMoviesWithCache('/movie/now_playing', { page: Math.floor(Math.random() * 5) + 1 }, 'nowPlaying')
         ]);
 
-        // Preload posters for all sections
-        preloadMoviePosters(featuredMovies.slice(0, 6));
-        preloadMoviePosters(trendingMovies.slice(0, 6));
-        preloadMoviePosters(popularMovies.slice(0, 6));
-        preloadMoviePosters(newReleases.slice(0, 6));
+        // Display movies for each section
+        displayMovies('featuredContent', featuredMovies);
+        displayMovies('trendingNow', trendingMovies);
+        displayMovies('popularOnCineMatch', popularMovies);
+        displayMovies('newReleases', newReleases);
 
-        // Display content
-        displayMovies('featuredContent', featuredMovies.slice(0, 6));
-        displayMovies('trendingNow', trendingMovies.slice(0, 6));
-        displayMovies('popularOnCineMatch', popularMovies.slice(0, 6));
-        displayMovies('newReleases', newReleases.slice(0, 6));
+        // Setup recommendation section navigation
+        setupRecommendationNavigation();
 
-        // Update watchlist last since it's user-specific
-        updateWatchlist();
-
+        hideLoadingIndicator();
     } catch (error) {
         console.error('Error initializing content:', error);
-        setError('featuredContent', 'Error loading movies. Please refresh the page.');
-        setError('trendingNow', 'Error loading movies. Please refresh the page.');
-        setError('continueWatching', 'Error loading watchlist. Please refresh the page.');
-        setError('popularOnCineMatch', 'Error loading movies. Please refresh the page.');
-        setError('newReleases', 'Error loading movies. Please refresh the page.');
+        hideLoadingIndicator();
+        document.querySelectorAll('.content-row').forEach(row => {
+            row.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Error loading movies. Please refresh the page.</p>
+                </div>
+            `;
+        });
     }
 });
-
-// Add refresh button to navbar
-const refreshButton = document.createElement('button');
-refreshButton.className = 'btn-refresh';
-refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i>';
-refreshButton.title = 'Refresh Content';
-refreshButton.addEventListener('click', async () => {
-    refreshButton.classList.add('spinning');
-    try {
-        // Clear cache
-        cache.data = {};
-        cache.timestamps = {};
-        
-        // Set loading states for all sections
-        setLoading('featuredContent', true);
-        setLoading('trendingNow', true);
-        setLoading('popularOnCineMatch', true);
-        setLoading('newReleases', true);
-        setLoading('continueWatching', true);
-        
-        // Refresh all content in parallel
-        const [featuredMovies, trendingMovies, popularMovies, newReleases, watchlistMovies] = await Promise.all([
-            fetchMoviesWithCache('/movie/popular', {}, 'featured'),
-            fetchMoviesWithCache('/trending/movie/week', {}, 'trending'),
-            fetchMoviesWithCache('/movie/top_rated', {}, 'topRated'),
-            fetchMoviesWithCache('/movie/now_playing', {}, 'nowPlaying'),
-            Promise.all(
-                userPreferences.watchlist.map(movieId => 
-                    fetch(`${config.BASE_URL}/movie/${movieId}?api_key=${config.API_KEY}`)
-                        .then(res => res.json())
-                )
-            )
-        ]);
-
-        // Update all sections
-        displayMovies('featuredContent', featuredMovies.slice(0, 6));
-        displayMovies('trendingNow', trendingMovies.slice(0, 6));
-        displayMovies('popularOnCineMatch', popularMovies.slice(0, 6));
-        displayMovies('newReleases', newReleases.slice(0, 6));
-        displayMovies('continueWatching', watchlistMovies);
-
-        // Show success message
-        const successMessage = document.createElement('div');
-        successMessage.className = 'refresh-success';
-        successMessage.innerHTML = '<i class="fas fa-check"></i> Content refreshed successfully';
-        document.body.appendChild(successMessage);
-        
-        // Remove success message after 3 seconds
-        setTimeout(() => {
-            successMessage.remove();
-        }, 3000);
-
-    } catch (error) {
-        console.error('Error refreshing content:', error);
-        setError('featuredContent', 'Error refreshing content. Please try again.');
-        setError('trendingNow', 'Error refreshing content. Please try again.');
-        setError('popularOnCineMatch', 'Error refreshing content. Please try again.');
-        setError('newReleases', 'Error refreshing content. Please try again.');
-        setError('continueWatching', 'Error refreshing watchlist. Please try again.');
-    } finally {
-        refreshButton.classList.remove('spinning');
-    }
-});
-
-// Add refresh button to navbar
-document.querySelector('.navbar-right').prepend(refreshButton);
 
 // Add intersection observer for lazy loading
 function setupLazyLoading() {
@@ -996,55 +1016,29 @@ window.addEventListener('scroll', debouncedScroll);
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
         try {
-            // Get the correct path for the service worker
-            const swPath = window.location.pathname.includes('/Movies_recommendations') 
-                ? '/Movies_recommendations/sw.js' 
-                : '/sw.js';
-            
+            // Update the path to match your project structure
+            const swPath = '/Movies_recommendations/service-worker.js';
             console.log('Registering service worker at:', swPath);
+            
             const registration = await navigator.serviceWorker.register(swPath);
             console.log('ServiceWorker registration successful:', registration);
             
-            // Preload critical assets with correct paths
-            const criticalAssets = [
-                window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/' : '/',
-                window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/index.html' : '/index.html',
-                window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/app.js' : '/app.js',
-                window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/styles.css' : '/styles.css'
-            ];
-            
-            // Cache critical assets
-            const cache = await caches.open('movie-app-v1');
-            await cache.addAll(criticalAssets);
-            
-            // Preload movie posters for featured content
-            const featuredResponse = await fetch(`${config.BASE_URL}/movie/popular?api_key=${config.API_KEY}`);
-            const featuredData = await featuredResponse.json();
-            if (featuredData.results) {
-                featuredData.results.slice(0, 6).forEach(movie => {
-                    if (movie.poster_path) {
-                        const img = new Image();
-                        img.src = `${config.IMAGE_BASE_URL}/w500${movie.poster_path}`;
-                    }
-                });
+            // Clear any old caches
+            try {
+                const cacheKeys = await caches.keys();
+                await Promise.all(
+                    cacheKeys.map(key => {
+                        if (key !== 'movie-app-v1') {
+                            return caches.delete(key);
+                        }
+                    })
+                );
+            } catch (err) {
+                console.warn('Failed to clear old caches:', err);
             }
+            
         } catch (err) {
             console.warn('ServiceWorker registration failed:', err);
-            // Fallback to regular caching
-            if ('caches' in window) {
-                try {
-                    const cache = await caches.open('movie-app-v1');
-                    const fallbackAssets = [
-                        window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/' : '/',
-                        window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/index.html' : '/index.html',
-                        window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/app.js' : '/app.js',
-                        window.location.pathname.includes('/Movies_recommendations') ? '/Movies_recommendations/styles.css' : '/styles.css'
-                    ];
-                    await cache.addAll(fallbackAssets);
-                } catch (cacheErr) {
-                    console.warn('Cache fallback failed:', cacheErr);
-                }
-            }
         }
     });
 }

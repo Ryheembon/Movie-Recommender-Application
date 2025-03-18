@@ -9,7 +9,7 @@ import webbrowser  # Add this for opening trailer links
 
 class MovieRecommenderApp:
     def __init__(self, master):
-        self.master = master
+        self.master = master  
         master.title("Movie Recommender")
         master.geometry("600x800")
         

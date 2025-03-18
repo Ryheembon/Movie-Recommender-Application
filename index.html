@@ -11,127 +11,90 @@
 <body>
     <!-- Navigation -->
     <nav class="navbar">
-        <div class="navbar-brand">
-            <h1 class="logo">CineMatch</h1>
-        </div>
+        <a href="#" class="logo">CineMatch</a>
         <div class="navbar-links">
             <a href="#" class="active">Home</a>
-            <a href="#">Discover</a>
-            <a href="#">My Recommendations</a>
-            <a href="#">Genres</a>
-            <a href="#">My Watchlist</a>
-        </div>
-        <div class="navbar-right">
-            <div class="search-container">
-                <i class="fas fa-search"></i>
-                <input type="text" class="search-input" placeholder="Search movies...">
-            </div>
-            <div class="user-profile">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png" alt="Profile">
-            </div>
+            <a href="#genres">Genres</a>
+            <a href="#recommendations">Recommendations</a>
+            <a href="#watchlist">Watchlist</a>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <header class="hero">
+    <section class="hero">
         <div class="hero-content">
-            <h1>Welcome to CineMatch</h1>
-            <p>Your personal AI-powered movie recommendation engine</p>
-            <div class="hero-buttons">
-                <button class="btn-primary" id="getRecommendations"><i class="fas fa-film"></i> Get Recommendations</button>
-                <button class="btn-secondary" id="selectGenres"><i class="fas fa-tags"></i> Select Your Genres</button>
-                <button class="btn-secondary"><i class="fas fa-info-circle"></i> How It Works</button>
-            </div>
+            <h1>Your personal AI-powered movie recommendation engine</h1>
+            <p>Discover your next favorite movie with personalized recommendations</p>
+            <button class="btn-primary" onclick="showGenreModal()">
+                <i class="fas fa-film"></i> Get Recommendations
+            </button>
         </div>
-    </header>
+    </section>
 
     <!-- Main Content -->
     <main>
-        <!-- Featured Content Row -->
+        <!-- Featured Content -->
         <section class="content-row">
-            <h2>Recommended for You</h2>
-            <div class="row-content" id="featuredContent">
-                <!-- Content will be dynamically added here -->
-            </div>
+            <h2>Featured on CineMatch</h2>
+            <div id="featuredContent" class="movie-grid"></div>
         </section>
 
         <!-- Trending Now -->
         <section class="content-row">
-            <h2>Trending Movies</h2>
-            <div class="row-content" id="trendingNow">
-                <!-- Content will be dynamically added here -->
-            </div>
-        </section>
-
-        <!-- Genres Section -->
-        <section class="content-row">
-            <h2>Browse by Genre</h2>
-            <div class="row-content" id="genres">
-                <!-- Genres will be dynamically added here -->
-            </div>
-        </section>
-
-        <!-- Continue Watching -->
-        <section class="content-row">
-            <h2>Your Watchlist</h2>
-            <div class="row-content" id="continueWatching">
-                <!-- Content will be dynamically added here -->
-            </div>
+            <h2>Trending Now</h2>
+            <div id="trendingNow" class="movie-grid"></div>
         </section>
 
         <!-- Popular on CineMatch -->
         <section class="content-row">
-            <h2>Popular Picks</h2>
-            <div class="row-content" id="popularOnCineMatch">
-                <!-- Content will be dynamically added here -->
-            </div>
+            <h2>Popular on CineMatch</h2>
+            <div id="popularOnCineMatch" class="movie-grid"></div>
         </section>
 
         <!-- New Releases -->
         <section class="content-row">
             <h2>New Releases</h2>
-            <div class="row-content" id="newReleases">
-                <!-- Content will be dynamically added here -->
-            </div>
+            <div id="newReleases" class="movie-grid"></div>
+        </section>
+
+        <!-- Recommended for You -->
+        <section class="recommendation-section">
+            <h2>Recommended for You</h2>
+            <div id="recommendedForYou" class="movie-grid"></div>
         </section>
     </main>
-
-    <!-- Movie Details Modal -->
-    <div id="movieModal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close">&times;</span>
-            <div class="modal-body">
-                <!-- Content will be dynamically added here -->
-            </div>
-        </div>
-    </div>
 
     <!-- Genre Selection Modal -->
     <div id="genreModal" class="modal">
         <div class="modal-content genre-modal">
-            <span class="modal-close">&times;</span>
+            <div class="modal-header">
+                <h2>Select Your Genres</h2>
+                <button class="modal-close">&times;</button>
+            </div>
             <div class="modal-body">
-                <h2>Select Your Favorite Genres</h2>
-                <p>Choose at least 3 genres to get personalized recommendations</p>
-                <div class="genre-selection-grid" id="genreSelectionGrid">
-                    <!-- Genres will be dynamically added here -->
-                </div>
+                <div class="genre-selection-grid"></div>
                 <div class="genre-selection-actions">
-                    <button class="btn-primary" id="saveGenres" disabled>Save Preferences</button>
+                    <button id="saveGenres" class="btn-primary" disabled>
+                        <i class="fas fa-check"></i> Get Recommendations
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- TMDb API Configuration -->
-    <script>
-        window.config = {
-            API_KEY: 'af767ffb2843b0a2bbb887d1af1a162d',
-            BASE_URL: 'https://api.themoviedb.org/3',
-            IMAGE_BASE_URL: 'https://image.tmdb.org/t/p'
-        };
-    </script>
+    <!-- Movie Details Modal -->
+    <div id="movieModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2></h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body"></div>
+        </div>
+    </div>
+
     <!-- Scripts -->
+    <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
 </html> 

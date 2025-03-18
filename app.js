@@ -1,8 +1,3 @@
-// TMDb API Configuration
-const API_KEY = 'your-api-key-here';
-const BASE_URL = 'https://api.themoviedb.org/3';
-const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
-
 // DOM Elements
 const navbar = document.querySelector('.navbar');
 const searchContainer = document.querySelector('.search-container');
@@ -35,7 +30,7 @@ document.addEventListener('click', (e) => {
 // Fetch and display content for different rows
 async function fetchContent(endpoint, containerId) {
     try {
-        const response = await fetch(`${BASE_URL}${endpoint}?api_key=${API_KEY}&language=en-US`);
+        const response = await fetch(`${config.BASE_URL}${endpoint}?api_key=${config.API_KEY}&language=en-US`);
         const data = await response.json();
         if (data.results && data.results.length > 0) {
             displayContent(data.results, containerId);
@@ -57,7 +52,7 @@ function displayContent(movies, containerId) {
 
     container.innerHTML = movies.map(movie => `
         <div class="movie-card" data-id="${movie.id}">
-            <img src="${movie.poster_path ? IMAGE_BASE_URL + '/w500' + movie.poster_path : 'https://via.placeholder.com/500x750?text=No+Image'}" 
+            <img src="${movie.poster_path ? config.IMAGE_BASE_URL + '/w500' + movie.poster_path : 'https://via.placeholder.com/500x750?text=No+Image'}" 
                  alt="${movie.title}"
                  onerror="this.src='https://via.placeholder.com/500x750?text=No+Image'">
             <div class="movie-info">
@@ -76,13 +71,13 @@ function displayContent(movies, containerId) {
 // Show movie details in modal
 async function showMovieDetails(movieId) {
     try {
-        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&append_to_response=credits,videos`);
+        const response = await fetch(`${config.BASE_URL}/movie/${movieId}?api_key=${config.API_KEY}&append_to_response=credits,videos`);
         const movie = await response.json();
         
         modalBody.innerHTML = `
             <div class="movie-details">
                 <div class="movie-header">
-                    <img src="${movie.poster_path ? IMAGE_BASE_URL + '/w500' + movie.poster_path : 'https://via.placeholder.com/500x750?text=No+Image'}" 
+                    <img src="${movie.poster_path ? config.IMAGE_BASE_URL + '/w500' + movie.poster_path : 'https://via.placeholder.com/500x750?text=No+Image'}" 
                          alt="${movie.title}"
                          onerror="this.src='https://via.placeholder.com/500x750?text=No+Image'">
                     <div class="movie-info">
@@ -143,7 +138,7 @@ searchInput.addEventListener('input', (e) => {
     if (query.length > 2) {
         searchTimeout = setTimeout(async () => {
             try {
-                const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}&language=en-US`);
+                const response = await fetch(`${config.BASE_URL}/search/movie?api_key=${config.API_KEY}&query=${encodeURIComponent(query)}&language=en-US`);
                 const data = await response.json();
                 if (data.results && data.results.length > 0) {
                     displayContent(data.results, 'searchResults');

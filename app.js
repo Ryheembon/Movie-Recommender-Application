@@ -14,7 +14,11 @@ const elements = {
     randomMoviesSection: document.querySelector('.random-movies-section'),
     randomMoviesGrid: document.querySelector('.random-movies-grid'),
     randomMoviesTitle: document.querySelector('.random-movies-title'),
-    randomMoviesClose: document.querySelector('.random-movies-close')
+    randomMoviesClose: document.querySelector('.random-movies-close'),
+    movieGrid: document.querySelector('.movie-grid'),
+    searchInput: document.querySelector('.search-input'),
+    searchButton: document.querySelector('.search-button'),
+    sections: document.querySelectorAll('section')
 };
 
 // Log DOM elements for debugging
@@ -687,9 +691,11 @@ async function showMovieDetails(movieId) {
 
         // Add close button functionality
         const closeBtn = elements.modalContent.querySelector('.modal-close');
-        closeBtn.addEventListener('click', () => {
-            elements.modal.classList.remove('active');
-        });
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                elements.modal.classList.remove('active');
+            });
+        }
 
     } catch (error) {
         console.error('Error showing movie details:', error);

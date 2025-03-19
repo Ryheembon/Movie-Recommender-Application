@@ -1,16 +1,72 @@
 // DOM Elements
-const navbar = document.querySelector('.navbar');
-const searchContainer = document.querySelector('.search-container');
-const searchInput = document.querySelector('.search-container input');
-const searchIcon = document.querySelector('.search-container i');
-const movieModal = document.getElementById('movieModal');
-const genreModal = document.getElementById('genreModal');
-const modalCloseBtn = document.querySelector('.modal-close');
-const modalBody = document.querySelector('.modal-body');
-const getRecommendationsBtn = document.getElementById('getRecommendations');
-const selectGenresBtn = document.getElementById('selectGenres');
-const saveGenresBtn = document.getElementById('saveGenres');
-const genreSelectionGrid = document.getElementById('genreSelectionGrid');
+const elements = {
+    navbar: document.querySelector('.navbar'),
+    heroSection: document.querySelector('.hero'),
+    movieGrids: document.querySelectorAll('.movie-grid'),
+    modal: document.querySelector('.modal'),
+    modalClose: document.querySelector('.modal-close'),
+    modalContent: document.querySelector('.modal-content'),
+    loadingIndicator: document.querySelector('.loading-indicator'),
+    navLinks: document.querySelectorAll('.nav-right a'),
+    genreModal: document.querySelector('.genre-modal'),
+    genreButtons: document.querySelectorAll('.genre-selection-item'),
+    saveGenresBtn: document.getElementById('saveGenres'),
+    randomMoviesSection: document.querySelector('.random-movies-section'),
+    randomMoviesGrid: document.querySelector('.random-movies-grid'),
+    randomMoviesTitle: document.querySelector('.random-movies-title'),
+    randomMoviesClose: document.querySelector('.random-movies-close')
+};
+
+// Log DOM elements for debugging
+console.log('DOM Elements:', elements);
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Show loading indicator
+        elements.loadingIndicator.style.display = 'flex';
+        
+        // Load user preferences
+        loadUserPreferences();
+
+        // Fetch different movies for each section
+        const [trendingMovies, popularMovies, newReleases, recommendedMovies] = await Promise.all([
+            fetchMovies('/trending/movie/week'),
+            fetchMovies('/movie/popular'),
+            fetchMovies('/movie/now_playing'),
+            fetchMovies('/movie/top_rated')
+        ]);
+
+        // Display movies for each section
+        const sections = document.querySelectorAll('.content-row');
+        sections[0].querySelector('.movie-grid').innerHTML = trendingMovies.map(createMovieCard).join('');
+        sections[1].querySelector('.movie-grid').innerHTML = popularMovies.map(createMovieCard).join('');
+        sections[2].querySelector('.movie-grid').innerHTML = newReleases.map(createMovieCard).join('');
+        sections[3].querySelector('.movie-grid').innerHTML = recommendedMovies.map(createMovieCard).join('');
+
+        // Add click events to all movie cards
+        document.querySelectorAll('.movie-card').forEach(card => {
+            card.addEventListener('click', () => showMovieDetails(card.dataset.movieId));
+        });
+
+        // Setup navigation for each section
+        sections.forEach(section => setupSectionNavigation(section));
+
+        // Hide loading indicator
+        elements.loadingIndicator.style.display = 'none';
+    } catch (error) {
+        console.error('Error initializing content:', error);
+        elements.loadingIndicator.style.display = 'none';
+        document.querySelectorAll('.content-row').forEach(row => {
+            row.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Error loading movies. Please refresh the page.</p>
+                </div>
+            `;
+        });
+    }
+});
 
 // Genres data
 const genres = [
@@ -43,36 +99,36 @@ let userPreferences = {
 
 // Debug logging
 console.log('DOM Elements:', {
-    navbar: !!navbar,
-    searchContainer: !!searchContainer,
-    searchInput: !!searchInput,
-    movieModal: !!movieModal,
-    modalCloseBtn: !!modalCloseBtn,
-    modalBody: !!modalBody,
-    getRecommendationsBtn: !!getRecommendationsBtn
+    navbar: !!elements.navbar,
+    searchContainer: !!elements.searchContainer,
+    searchInput: !!elements.searchInput,
+    movieModal: !!elements.modal,
+    modalCloseBtn: !!elements.modalClose,
+    modalBody: !!elements.modalContent,
+    getRecommendationsBtn: !!elements.getRecommendationsBtn
 });
 
 // Navbar scroll effect
 window.addEventListener('scroll', () => {
     if (window.scrollY > 100) {
-        navbar.classList.add('navbar-scrolled');
+        elements.navbar.classList.add('navbar-scrolled');
     } else {
-        navbar.classList.remove('navbar-scrolled');
+        elements.navbar.classList.remove('navbar-scrolled');
     }
 });
 
 // Toggle search bar
-searchIcon.addEventListener('click', () => {
-    searchContainer.classList.toggle('active');
-    if (searchContainer.classList.contains('active')) {
-        searchInput.focus();
+elements.searchIcon.addEventListener('click', () => {
+    elements.searchContainer.classList.toggle('active');
+    if (elements.searchContainer.classList.contains('active')) {
+        elements.searchInput.focus();
     }
 });
 
 // Handle search
-searchInput.addEventListener('keypress', async (e) => {
+elements.searchInput.addEventListener('keypress', async (e) => {
     if (e.key === 'Enter') {
-        const query = searchInput.value.trim();
+        const query = elements.searchInput.value.trim();
         if (query) {
             try {
                 const response = await fetch(`${config.BASE_URL}/search/movie?api_key=${config.API_KEY}&query=${encodeURIComponent(query)}`);
@@ -122,8 +178,8 @@ searchInput.addEventListener('keypress', async (e) => {
 
 // Close search on click outside
 document.addEventListener('click', (e) => {
-    if (!searchContainer.contains(e.target)) {
-        searchContainer.classList.remove('active');
+    if (!elements.searchContainer.contains(e.target)) {
+        elements.searchContainer.classList.remove('active');
     }
 });
 
@@ -207,9 +263,11 @@ async function fetchMovies(endpoint, params = {}) {
         });
         
         const response = await fetch(`${config.BASE_URL}${endpoint}?${queryParams}`);
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
-        return data.results;
+        return data.results || [];
     } catch (error) {
         console.error('Error fetching movies:', error);
         return [];
@@ -558,13 +616,13 @@ async function batchFetchAdditionalData(movieId) {
 // Show movie details
 async function showMovieDetails(movieId) {
     try {
-        modalBody.innerHTML = `
+        elements.modalContent.innerHTML = `
             <div class="loading">
                 <i class="fas fa-spinner"></i>
                 <p>Loading movie details...</p>
             </div>
         `;
-        movieModal.classList.add('active');
+        elements.modal.classList.add('active');
 
         const [movieData, videosData] = await Promise.all([
             fetch(`${config.BASE_URL}/movie/${movieId}?api_key=${config.API_KEY}`).then(res => res.json()),
@@ -579,7 +637,7 @@ async function showMovieDetails(movieId) {
             ? `${config.IMAGE_BASE_URL}/w500${movieData.poster_path}`
             : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';
 
-        modalBody.innerHTML = `
+        elements.modalContent.innerHTML = `
             <div class="movie-details">
                 <div class="movie-header">
                     <img src="${posterPath}" 
@@ -616,7 +674,7 @@ async function showMovieDetails(movieId) {
 
     } catch (error) {
         console.error('Error showing movie details:', error);
-        modalBody.innerHTML = `
+        elements.modalContent.innerHTML = `
             <div class="error-message">
                 <i class="fas fa-exclamation-circle"></i>
                 <p>Error loading movie details. Please try again.</p>
@@ -626,13 +684,13 @@ async function showMovieDetails(movieId) {
 }
 
 // Close modal
-modalCloseBtn.addEventListener('click', () => {
-    movieModal.classList.remove('active');
+elements.modalClose.addEventListener('click', () => {
+    elements.modal.classList.remove('active');
 });
 
-movieModal.addEventListener('click', (e) => {
-    if (e.target === movieModal) {
-        movieModal.classList.remove('active');
+elements.modal.addEventListener('click', (e) => {
+    if (e.target === elements.modal) {
+        elements.modal.classList.remove('active');
     }
 });
 
@@ -672,7 +730,7 @@ const performSearch = async (query) => {
 
 const debouncedSearch = debounce(performSearch, 500);
 
-searchInput.addEventListener('input', (e) => {
+elements.searchInput.addEventListener('input', (e) => {
     const query = e.target.value.trim();
     if (query.length >= 2) {
         debouncedSearch(query);
@@ -686,7 +744,7 @@ searchInput.addEventListener('input', (e) => {
 });
 
 // Get recommendations button
-getRecommendationsBtn.addEventListener('click', getRecommendations);
+elements.getRecommendationsBtn.addEventListener('click', getRecommendations);
 
 // Load user preferences from localStorage
 function loadUserPreferences() {
@@ -721,15 +779,15 @@ function createGenreSelectionItem(genre) {
 
 // Display genre selection modal
 function showGenreSelection() {
-    genreSelectionGrid.innerHTML = genres.map(createGenreSelectionItem).join('');
-    genreModal.classList.add('active');
+    elements.genreSelectionGrid.innerHTML = genres.map(createGenreSelectionItem).join('');
+    elements.genreModal.classList.add('active');
     updateSaveButton();
 }
 
 // Update save button state
 function updateSaveButton() {
     const selectedGenres = document.querySelectorAll('.genre-selection-item.selected');
-    saveGenresBtn.disabled = selectedGenres.length < 3;
+    elements.saveGenresBtn.disabled = selectedGenres.length < 3;
 }
 
 // Handle genre selection
@@ -737,14 +795,14 @@ function handleGenreSelection() {
     const selectedGenres = document.querySelectorAll('.genre-selection-item.selected');
     userPreferences.favoriteGenres = Array.from(selectedGenres).map(item => parseInt(item.dataset.id));
     saveUserPreferences();
-    genreModal.classList.remove('active');
+    elements.genreModal.classList.remove('active');
     getRecommendations(); // Update recommendations with new genres
 }
 
 // Event Listeners
-selectGenresBtn.addEventListener('click', showGenreSelection);
+elements.selectGenresBtn.addEventListener('click', showGenreSelection);
 
-genreSelectionGrid.addEventListener('click', (e) => {
+elements.genreSelectionGrid.addEventListener('click', (e) => {
     const genreItem = e.target.closest('.genre-selection-item');
     if (genreItem) {
         genreItem.classList.toggle('selected');
@@ -752,16 +810,16 @@ genreSelectionGrid.addEventListener('click', (e) => {
     }
 });
 
-saveGenresBtn.addEventListener('click', handleGenreSelection);
+elements.saveGenresBtn.addEventListener('click', handleGenreSelection);
 
 // Close genre modal
-genreModal.querySelector('.modal-close').addEventListener('click', () => {
-    genreModal.classList.remove('active');
+elements.genreModal.querySelector('.modal-close').addEventListener('click', () => {
+    elements.genreModal.classList.remove('active');
 });
 
-genreModal.addEventListener('click', (e) => {
-    if (e.target === genreModal) {
-        genreModal.classList.remove('active');
+elements.genreModal.addEventListener('click', (e) => {
+    if (e.target === elements.genreModal) {
+        elements.genreModal.classList.remove('active');
     }
 });
 
@@ -907,49 +965,6 @@ function setupSectionNavigation(section) {
     }
 }
 
-// Update the initialization code
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        showLoadingIndicator();
-        
-        // Load user preferences
-        loadUserPreferences();
-
-        // Display genres
-        displayGenres();
-
-        // Fetch different movies for each section with different pages
-        const [featuredMovies, trendingMovies, popularMovies, newReleases] = await Promise.all([
-            fetchMoviesWithCache('/movie/popular', { page: Math.floor(Math.random() * 5) + 1 }, 'featured'),
-            fetchMoviesWithCache('/trending/movie/week', { page: Math.floor(Math.random() * 5) + 1 }, 'trending'),
-            fetchMoviesWithCache('/movie/top_rated', { page: Math.floor(Math.random() * 5) + 1 }, 'topRated'),
-            fetchMoviesWithCache('/movie/now_playing', { page: Math.floor(Math.random() * 5) + 1 }, 'nowPlaying')
-        ]);
-
-        // Display movies for each section
-        displayMovies('featuredContent', featuredMovies);
-        displayMovies('trendingNow', trendingMovies);
-        displayMovies('popularOnCineMatch', popularMovies);
-        displayMovies('newReleases', newReleases);
-
-        // Setup recommendation section navigation
-        setupRecommendationNavigation();
-
-        hideLoadingIndicator();
-    } catch (error) {
-        console.error('Error initializing content:', error);
-        hideLoadingIndicator();
-        document.querySelectorAll('.content-row').forEach(row => {
-            row.innerHTML = `
-                <div class="error-message">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <p>Error loading movies. Please refresh the page.</p>
-                </div>
-            `;
-        });
-    }
-});
-
 // Add intersection observer for lazy loading
 function setupLazyLoading() {
     const observer = new IntersectionObserver((entries) => {
@@ -1081,7 +1096,7 @@ async function preloadAdditionalData(movieId) {
         const buy = providers.buy || [];
 
         // Update modal with additional content
-        const loadingSection = modalBody.querySelector('.loading-additional');
+        const loadingSection = elements.modalContent.querySelector('.loading-additional');
         if (loadingSection) {
             loadingSection.outerHTML = `
                 <div class="streaming-section">
@@ -1147,9 +1162,154 @@ async function preloadAdditionalData(movieId) {
         }
     } catch (error) {
         console.error('Error loading additional data:', error);
-        const loadingSection = modalBody.querySelector('.loading-additional');
+        const loadingSection = elements.modalContent.querySelector('.loading-additional');
         if (loadingSection) {
             loadingSection.innerHTML = '<p>Error loading additional information. Please try again.</p>';
         }
     }
-} 
+}
+
+// Function to get random movies by genre
+async function getRandomMoviesByGenre(genreId) {
+    try {
+        const randomPage = Math.floor(Math.random() * 10) + 1;
+        const response = await fetch(`${TMDB_API_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genreId}&sort_by=popularity.desc&vote_count.gte=100&page=${randomPage}&language=en-US`);
+        const data = await response.json();
+        
+        if (data.results && data.results.length > 0) {
+            // Get 3 random movies
+            const selectedMovies = shuffleArray([...data.results]).slice(0, 3);
+            
+            // Get additional details including trailers for each movie
+            const moviesWithDetails = await Promise.all(
+                selectedMovies.map(async (movie) => {
+                    const detailsResponse = await fetch(`${TMDB_API_URL}/movie/${movie.id}?api_key=${TMDB_API_KEY}&append_to_response=videos`);
+                    const details = await detailsResponse.json();
+                    
+                    // Get trailer
+                    let trailer = null;
+                    if (details.videos && details.videos.results) {
+                        const trailers = details.videos.results.filter(v => 
+                            v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")
+                        );
+                        if (trailers.length > 0) {
+                            trailer = trailers[Math.floor(Math.random() * trailers.length)];
+                        }
+                    }
+                    
+                    return {
+                        ...movie,
+                        trailer: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null
+                    };
+                })
+            );
+            
+            return moviesWithDetails;
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching random movies:', error);
+        return [];
+    }
+}
+
+// Function to display random movies
+function displayRandomMovies(movies) {
+    const container = document.getElementById('randomMovies');
+    if (!container) return;
+    
+    if (!movies || movies.length === 0) {
+        container.innerHTML = `
+            <div class="error-message">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>No movies found</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let contentRow = container.closest('.content-row');
+    if (!contentRow) {
+        contentRow = document.createElement('div');
+        contentRow.className = 'content-row';
+        contentRow.innerHTML = `
+            <h2>Random Movies</h2>
+            <div class="movie-grid"></div>
+        `;
+        container.parentNode.insertBefore(contentRow, container);
+    }
+    
+    const movieGrid = contentRow.querySelector('.movie-grid');
+    movieGrid.innerHTML = movies.map(movie => `
+        <div class="movie-card" data-movie-id="${movie.id}">
+            <img src="${movie.poster_path ? TMDB_IMG_URL + movie.poster_path : 'placeholder.jpg'}" 
+                 alt="${movie.title}" 
+                 loading="lazy">
+            <div class="movie-info">
+                <h3>${movie.title}</h3>
+                <p class="rating">⭐ ${movie.vote_average}/10</p>
+                ${movie.trailer ? `
+                    <a href="${movie.trailer}" target="_blank" class="trailer-link" onclick="event.stopPropagation();">
+                        <i class="fab fa-youtube"></i> Watch Trailer
+                    </a>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+    
+    // Setup navigation for this section
+    setupSectionNavigation(contentRow);
+    
+    // Add click event for movie details
+    movieGrid.querySelectorAll('.movie-card').forEach(card => {
+        card.addEventListener('click', () => showMovieDetails(card.dataset.movieId));
+    });
+}
+
+// Update the genre selection handler
+function handleGenreSelection(genreId) {
+    const genreModal = document.getElementById('genreModal');
+    if (genreModal) {
+        genreModal.style.display = 'none';
+    }
+    
+    // Show loading state
+    const randomMoviesContainer = document.getElementById('randomMovies');
+    if (randomMoviesContainer) {
+        randomMoviesContainer.innerHTML = `
+            <div class="loading-message">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading random movies...</p>
+            </div>
+        `;
+    }
+    
+    // Get and display random movies
+    getRandomMoviesByGenre(genreId).then(movies => {
+        displayRandomMovies(movies);
+    });
+}
+
+// Add styles for trailer link
+const style = document.createElement('style');
+style.textContent = `
+    .trailer-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: #ff0000;
+        text-decoration: none;
+        font-size: 0.9rem;
+        margin-top: 5px;
+        transition: color 0.3s ease;
+    }
+    
+    .trailer-link:hover {
+        color: #cc0000;
+    }
+    
+    .trailer-link i {
+        font-size: 1.2rem;
+    }
+`;
+document.head.appendChild(style); 

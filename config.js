@@ -5,5 +5,8 @@ const config = {
     IMAGE_BASE_URL: 'https://image.tmdb.org/t/p'
 };
 
-// Export the config object
-export default config; 
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = config;
+} else {
+    window.config = config;
+} 

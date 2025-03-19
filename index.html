@@ -3,93 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineMatch - Your Personal Movie Recommender</title>
-    <link rel="icon" href="data:,">
+    <title>Netflix Clone</title>
+    <link rel="icon" type="image/x-icon" href="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Navigation -->
+    <!-- Netflix-style Navigation -->
     <nav class="navbar">
-        <a href="#" class="logo">CineMatch</a>
-        <div class="navbar-links">
+        <div class="nav-left">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" alt="Netflix" class="logo">
+        </div>
+        <div class="nav-right">
             <a href="#" class="active">Home</a>
-            <a href="#genres">Genres</a>
-            <a href="#recommendations">Recommendations</a>
-            <a href="#watchlist">Watchlist</a>
+            <a href="#">TV Shows</a>
+            <a href="#">Movies</a>
+            <a href="#">New & Popular</a>
+            <a href="#">My List</a>
         </div>
     </nav>
 
-    <!-- Hero Section -->
+    <!-- Hero Section with Featured Content -->
     <section class="hero">
         <div class="hero-content">
-            <h1>Your personal AI-powered movie recommendation engine</h1>
-            <p>Discover your next favorite movie with personalized recommendations</p>
-            <button class="btn-primary" onclick="showGenreModal()">
-                <i class="fas fa-film"></i> Get Recommendations
-            </button>
+            <h1>Featured Title</h1>
+            <p>Movie description will appear here</p>
+            <div class="hero-buttons">
+                <button class="btn-play"><i class="fas fa-play"></i> Play</button>
+                <button class="btn-more"><i class="fas fa-info-circle"></i> More Info</button>
+            </div>
         </div>
     </section>
 
     <!-- Main Content -->
     <main>
-        <!-- Featured Content -->
-        <section class="content-row">
-            <h2>Featured on CineMatch</h2>
-            <div id="featuredContent" class="movie-grid"></div>
-        </section>
-
         <!-- Trending Now -->
         <section class="content-row">
             <h2>Trending Now</h2>
-            <div id="trendingNow" class="movie-grid"></div>
+            <div class="movie-grid"></div>
         </section>
 
-        <!-- Popular on CineMatch -->
+        <!-- Popular on Netflix -->
         <section class="content-row">
-            <h2>Popular on CineMatch</h2>
-            <div id="popularOnCineMatch" class="movie-grid"></div>
+            <h2>Popular on Netflix</h2>
+            <div class="movie-grid"></div>
         </section>
 
         <!-- New Releases -->
         <section class="content-row">
             <h2>New Releases</h2>
-            <div id="newReleases" class="movie-grid"></div>
+            <div class="movie-grid"></div>
         </section>
 
         <!-- Recommended for You -->
-        <section class="recommendation-section">
+        <section class="content-row">
             <h2>Recommended for You</h2>
-            <div id="recommendedForYou" class="movie-grid"></div>
+            <div class="movie-grid"></div>
         </section>
     </main>
 
-    <!-- Genre Selection Modal -->
-    <div id="genreModal" class="modal">
-        <div class="modal-content genre-modal">
-            <div class="modal-header">
-                <h2>Select Your Genres</h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="genre-selection-grid"></div>
-                <div class="genre-selection-actions">
-                    <button id="saveGenres" class="btn-primary" disabled>
-                        <i class="fas fa-check"></i> Get Recommendations
-                    </button>
-                </div>
-            </div>
+    <!-- Movie Details Modal -->
+    <div class="modal">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <div class="modal-body"></div>
         </div>
     </div>
 
-    <!-- Movie Details Modal -->
-    <div id="movieModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2></h2>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body"></div>
+    <!-- Loading Indicator -->
+    <div class="loading-indicator" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading movies...</p>
         </div>
     </div>
 

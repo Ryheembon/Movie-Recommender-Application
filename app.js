@@ -8,8 +8,7 @@ const navbar = document.querySelector('.navbar');
 const heroSection = document.querySelector('.hero');
 const heroContent = document.querySelector('.hero-content');
 const movieGrids = document.querySelectorAll('.movie-grid');
-const modal = document.querySelector('.modal');
-const modalClose = document.querySelector('.modal-close');
+const modal = document.getElementById('movieModal');
 const searchInput = document.querySelector('.search-input');
 const searchButton = document.querySelector('.search-button');
 
@@ -19,12 +18,24 @@ let isLoading = false;
 let hasMorePages = true;
 
 // Event Listeners
-window.addEventListener('scroll', handleScroll);
-window.addEventListener('resize', handleResize);
-modalClose.addEventListener('click', closeModal);
-searchButton.addEventListener('click', handleSearch);
-searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleSearch();
+document.addEventListener('DOMContentLoaded', () => {
+    loadHeroContent();
+    loadMovieContent();
+    handleResize();
+    setupInfiniteScroll();
+
+    // Search functionality
+    searchButton.addEventListener('click', handleSearch);
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSearch();
+    });
+
+    // Modal close functionality
+    modal.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-close') || e.target === modal) {
+            closeModal();
+        }
+    });
 });
 
 // Scroll Handler
@@ -212,7 +223,7 @@ async function showMovieDetails(movieId) {
 // Close Modal
 function closeModal() {
     modal.classList.remove('active');
-    document.body.style.overflow = '';
+    document.body.style.overflow = 'auto';
 }
 
 // Play Movie
@@ -233,14 +244,36 @@ async function handleSearch() {
     if (!query) return;
 
     try {
+        // Show loading state
+        const searchResults = document.createElement('section');
+        searchResults.className = 'content-row';
+        searchResults.setAttribute('data-category', 'search');
+        searchResults.innerHTML = `
+            <h2>Search Results for "${query}"</h2>
+            <div class="movie-grid"></div>
+        `;
+
+        // Remove previous search results if any
+        const previousSearch = document.querySelector('.content-row[data-category="search"]');
+        if (previousSearch) {
+            previousSearch.remove();
+        }
+
+        // Add new search results section
+        document.querySelector('main').prepend(searchResults);
+
         const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1`);
         const data = await response.json();
         
-        // Clear existing content
-        movieGrids.forEach(grid => grid.innerHTML = '');
-        
-        // Display search results
-        displayMovies(data.results, 'Search Results');
+        if (data.results.length === 0) {
+            searchResults.innerHTML = `
+                <h2>No results found for "${query}"</h2>
+                <p>Try searching for something else</p>
+            `;
+            return;
+        }
+
+        displayMovies(data.results, 'search');
     } catch (error) {
         console.error('Error searching movies:', error);
     }

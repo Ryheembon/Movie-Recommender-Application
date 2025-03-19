@@ -278,4 +278,20 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHeroContent();
     loadMovieContent();
     handleResize();
+    setupInfiniteScroll();
+});
+
+// Close modal when clicking the close button
+document.querySelector('.modal-close').addEventListener('click', () => {
+    const modal = document.getElementById('movieModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+});
+
+// Close modal when clicking outside
+document.getElementById('movieModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+        e.currentTarget.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
 }); 

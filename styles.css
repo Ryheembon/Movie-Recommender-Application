@@ -606,4 +606,65 @@ main {
 .footer .copyright {
     color: var(--secondary-color);
     font-size: 12px;
+}
+
+/* Streaming Information Styles */
+.streaming-info {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.streaming-section {
+    margin-bottom: 15px;
+}
+
+.streaming-section:last-child {
+    margin-bottom: 0;
+}
+
+.streaming-section h3 {
+    color: var(--text-color);
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.streaming-section h3 i {
+    color: var(--primary-color);
+}
+
+.provider-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.provider {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.provider:hover {
+    transform: scale(1.1);
+}
+
+.provider img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-streaming {
+    color: var(--secondary-color);
+    font-style: italic;
+    text-align: center;
+    padding: 10px;
 } 

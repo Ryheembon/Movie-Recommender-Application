@@ -186,11 +186,70 @@ function createMovieCard(movie) {
 // Show Movie Details
 async function showMovieDetails(movieId) {
     try {
-        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&language=en-US&append_to_response=videos`);
-        const movie = await response.json();
+        // Fetch movie details, videos, and watch providers
+        const [movieResponse, providersResponse] = await Promise.all([
+            fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&language=en-US&append_to_response=videos`),
+            fetch(`${BASE_URL}/movie/${movieId}/watch/providers?api_key=${API_KEY}`)
+        ]);
+        
+        const movie = await movieResponse.json();
+        const providers = await providersResponse.json();
         
         const trailer = movie.videos.results.find(video => video.type === 'Trailer');
         const trailerKey = trailer ? trailer.key : null;
+
+        // Get US streaming providers
+        const usProviders = providers.results.US || {};
+        const streamingServices = usProviders.flatrate || [];
+        const rentServices = usProviders.rent || [];
+        const buyServices = usProviders.buy || [];
+
+        // Create streaming info HTML
+        const streamingInfo = `
+            <div class="streaming-info">
+                ${streamingServices.length > 0 ? `
+                    <div class="streaming-section">
+                        <h3><i class="fas fa-play-circle"></i> Stream Now</h3>
+                        <div class="provider-list">
+                            ${streamingServices.map(provider => `
+                                <span class="provider" title="${provider.provider_name}">
+                                    <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" alt="${provider.provider_name}">
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                ${rentServices.length > 0 ? `
+                    <div class="streaming-section">
+                        <h3><i class="fas fa-clock"></i> Rent</h3>
+                        <div class="provider-list">
+                            ${rentServices.map(provider => `
+                                <span class="provider" title="${provider.provider_name}">
+                                    <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" alt="${provider.provider_name}">
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                ${buyServices.length > 0 ? `
+                    <div class="streaming-section">
+                        <h3><i class="fas fa-shopping-cart"></i> Buy</h3>
+                        <div class="provider-list">
+                            ${buyServices.map(provider => `
+                                <span class="provider" title="${provider.provider_name}">
+                                    <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" alt="${provider.provider_name}">
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                ${streamingServices.length === 0 && rentServices.length === 0 && buyServices.length === 0 ? `
+                    <div class="streaming-section">
+                        <p class="no-streaming">Streaming information not available</p>
+                    </div>
+                ` : ''}
+            </div>
+        `;
 
         modal.innerHTML = `
             <button class="modal-close" aria-label="Close modal">&times;</button>
@@ -216,6 +275,7 @@ async function showMovieDetails(movieId) {
                             </div>
                         </div>
                     </div>
+                    ${streamingInfo}
                     ${trailerKey ? `
                         <div class="trailer-section">
                             <h3>Trailer</h3>

@@ -17,6 +17,11 @@ let currentPage = 1;
 let isLoading = false;
 let hasMorePages = true;
 
+// Setup Infinite Scroll
+function setupInfiniteScroll() {
+    window.addEventListener('scroll', handleScroll);
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
     loadHeroContent();

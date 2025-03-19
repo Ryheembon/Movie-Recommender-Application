@@ -15,36 +15,42 @@
         <div class="nav-right">
             <div class="search-container">
                 <input type="text" class="search-input" placeholder="Search movies...">
-                <button class="search-button">
+                <button class="search-button" title="Search">
                     <i class="fas fa-search"></i>
                 </button>
             </div>
         </div>
     </nav>
 
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Welcome to CineStream</h1>
+            <p>Discover your next favorite movie or TV show</p>
+            <div class="hero-buttons">
+                <button class="btn-play"><i class="fas fa-play"></i> Watch Now</button>
+                <button class="btn-more"><i class="fas fa-info-circle"></i> More Info</button>
+            </div>
+        </div>
+    </section>
+
     <main>
-        <section id="home" class="active">
-            <h2>Welcome to CineStream</h2>
+        <section class="content-row">
+            <h2>Trending Now</h2>
             <div class="movie-grid"></div>
         </section>
 
-        <section id="movies">
-            <h2>Movies</h2>
+        <section class="content-row">
+            <h2>Popular Movies</h2>
             <div class="movie-grid"></div>
         </section>
 
-        <section id="tv-series">
-            <h2>TV Series</h2>
+        <section class="content-row">
+            <h2>New Releases</h2>
             <div class="movie-grid"></div>
         </section>
 
-        <section id="new-popular">
-            <h2>New & Popular</h2>
-            <div class="movie-grid"></div>
-        </section>
-
-        <section id="my-list">
-            <h2>My List</h2>
+        <section class="content-row">
+            <h2>Recommended for You</h2>
             <div class="movie-grid"></div>
         </section>
     </main>

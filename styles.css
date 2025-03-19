@@ -6,10 +6,11 @@
 }
 
 :root {
-    --primary-color: #2C3E50;
-    --accent-color: #3498DB;
-    --text-color: #ffffff;
-    --background-color: #1a1a1a;
+    --primary-color: #E50914;
+    --background-color: #141414;
+    --text-color: #FFFFFF;
+    --secondary-color: #808080;
+    --accent-color: #E50914;
     --hover-color: #2980B9;
 }
 

@@ -18,7 +18,8 @@ const elements = {
     movieGrid: document.querySelector('.movie-grid'),
     searchInput: document.querySelector('.search-input'),
     searchButton: document.querySelector('.search-button'),
-    sections: document.querySelectorAll('section')
+    sections: document.querySelectorAll('section'),
+    heroContent: document.querySelector('.hero-content')
 };
 
 // Log DOM elements for debugging
@@ -1611,4 +1612,51 @@ function showError(message) {
 document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
     loadHomeContent(); // Load home content by default
-}); 
+});
+
+// Load all movie sections
+async function loadAllMovieSections() {
+    const sections = [
+        { endpoint: '/movie/trending/week', title: 'Trending This Week' },
+        { endpoint: '/movie/popular', title: 'Popular on CineStream' },
+        { endpoint: '/movie/now_playing', title: 'New Releases' },
+        { endpoint: '/movie/top_rated', title: 'Top Rated' },
+        { endpoint: '/movie/upcoming', title: 'Coming Soon' }
+    ];
+
+    try {
+        const promises = sections.map(section => fetchMovies(section.endpoint));
+        const results = await Promise.all(promises);
+        
+        results.forEach((movies, index) => {
+            if (elements.movieGrids[index]) {
+                const section = document.createElement('section');
+                section.className = 'content-row';
+                section.innerHTML = `
+                    <h2>${sections[index].title}</h2>
+                    <div class="movie-slider">
+                        ${movies.map(movie => `
+                            <div class="movie-card" onclick="showMovieDetails(${movie.id})">
+                                <img src="${movie.poster_path ? config.IMAGE_BASE_URL + '/w500' + movie.poster_path : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image'}" 
+                                     alt="${movie.title}"
+                                     loading="lazy"
+                                     onerror="this.onerror=null; this.src='https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';">
+                                <div class="movie-info">
+                                    <h3>${movie.title}</h3>
+                                    <p>${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'}</p>
+                                    <div class="movie-buttons">
+                                        <button class="btn-play"><i class="fas fa-play"></i></button>
+                                        <button class="btn-more"><i class="fas fa-info-circle"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                document.querySelector('main').appendChild(section);
+            }
+        });
+    } catch (error) {
+        console.error('Error loading movie sections:', error);
+    }
+} 

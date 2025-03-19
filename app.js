@@ -239,9 +239,27 @@ function closeModal() {
 }
 
 // Play Movie
-function playMovie(movieId) {
-    // Implement play functionality
-    console.log('Playing movie:', movieId);
+async function playMovie(movieId) {
+    try {
+        // Fetch movie details to get the trailer
+        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&language=en-US&append_to_response=videos`);
+        const movie = await response.json();
+        
+        // Find the trailer
+        const trailer = movie.videos.results.find(video => video.type === 'Trailer');
+        
+        if (trailer) {
+            // Open trailer in a new window
+            window.open(`https://www.youtube.com/watch?v=${trailer.key}`, '_blank');
+        } else {
+            // If no trailer is available, show movie details instead
+            showMovieDetails(movieId);
+        }
+    } catch (error) {
+        console.error('Error playing movie:', error);
+        // If there's an error, show movie details instead
+        showMovieDetails(movieId);
+    }
 }
 
 // Add to Watchlist

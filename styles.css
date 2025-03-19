@@ -337,10 +337,15 @@ main {
     background-color: rgba(0, 0, 0, 0.9);
     z-index: 1000;
     overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .modal.active {
     display: block;
+    opacity: 1;
+    visibility: visible;
 }
 
 .modal-content {
@@ -352,6 +357,12 @@ main {
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.modal.active .modal-content {
+    transform: translateY(0);
 }
 
 .modal-close {

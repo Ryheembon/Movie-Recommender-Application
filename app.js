@@ -167,8 +167,8 @@ function createMovieCard(movie) {
     card.className = 'movie-card';
     card.innerHTML = `
         <img src="${IMAGE_BASE_URL}/w500${movie.poster_path}" alt="${movie.title}">
-        <div class="movie-info">
-            <h3>${movie.title}</h3>
+            <div class="movie-info">
+                <h3>${movie.title}</h3>
             <p>${movie.release_date.split('-')[0]}</p>
             <div class="movie-buttons">
                 <button onclick="playMovie(${movie.id})">
@@ -186,6 +186,10 @@ function createMovieCard(movie) {
 // Show Movie Details
 async function showMovieDetails(movieId) {
     try {
+        // Show loading state
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
         // Fetch movie details, videos, and watch providers
         const [movieResponse, providersResponse] = await Promise.all([
             fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&language=en-US&append_to_response=videos`),
@@ -292,10 +296,22 @@ async function showMovieDetails(movieId) {
             </div>
         `;
 
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
+        // Add event listener for the close button
+        const closeButton = modal.querySelector('.modal-close');
+        if (closeButton) {
+            closeButton.addEventListener('click', closeModal);
+        }
     } catch (error) {
         console.error('Error loading movie details:', error);
+        modal.innerHTML = `
+            <button class="modal-close" aria-label="Close modal">&times;</button>
+            <div class="modal-content">
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Error loading movie details. Please try again later.</p>
+                </div>
+            </div>
+        `;
     }
 }
 
@@ -349,7 +365,7 @@ async function handleSearch() {
         console.log('Empty search query');
         return;
     }
-
+    
     try {
         console.log('Starting search...');
         // Show loading state

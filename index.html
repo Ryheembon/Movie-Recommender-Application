@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CineStream</title>
+    <title>CineStream - Watch Movies & TV Shows</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -13,8 +13,13 @@
             <h1>CineStream</h1>
         </div>
         <div class="nav-right">
+            <a href="#" class="active">Home</a>
+            <a href="#">Movies</a>
+            <a href="#">TV Series</a>
+            <a href="#">New & Popular</a>
+            <a href="#">My List</a>
             <div class="search-container">
-                <input type="text" class="search-input" placeholder="Search movies...">
+                <input type="text" class="search-input" placeholder="Search movies & TV shows...">
                 <button class="search-button" title="Search">
                     <i class="fas fa-search"></i>
                 </button>
@@ -25,40 +30,75 @@
     <section class="hero">
         <div class="hero-content">
             <h1>Welcome to CineStream</h1>
-            <p>Discover your next favorite movie or TV show</p>
+            <p>Discover the best movies and TV shows. Start watching now!</p>
             <div class="hero-buttons">
-                <button class="btn-play"><i class="fas fa-play"></i> Watch Now</button>
-                <button class="btn-more"><i class="fas fa-info-circle"></i> More Info</button>
+                <button class="btn-play">
+                    <i class="fas fa-play"></i> Watch Now
+                </button>
+                <button class="btn-more">
+                    <i class="fas fa-info-circle"></i> More Info
+                </button>
             </div>
         </div>
     </section>
 
     <main>
-        <section class="content-row">
+        <section class="content-row" data-category="trending">
             <h2>Trending Now</h2>
             <div class="movie-grid"></div>
         </section>
 
-        <section class="content-row">
+        <section class="content-row" data-category="popular">
             <h2>Popular Movies</h2>
             <div class="movie-grid"></div>
         </section>
 
-        <section class="content-row">
+        <section class="content-row" data-category="new">
             <h2>New Releases</h2>
             <div class="movie-grid"></div>
         </section>
 
-        <section class="content-row">
+        <section class="content-row" data-category="recommended">
             <h2>Recommended for You</h2>
             <div class="movie-grid"></div>
         </section>
     </main>
 
     <div class="modal">
-        <div class="modal-content"></div>
+        <button class="modal-close">&times;</button>
+        <div class="modal-content">
+            <div class="movie-details">
+                <div class="movie-header">
+                    <img src="" alt="">
+                    <div class="movie-info">
+                        <h2></h2>
+                        <p class="overview"></p>
+                        <div class="movie-stats">
+                            <span><i class="fas fa-star"></i></span>
+                            <span><i class="fas fa-calendar"></i></span>
+                            <span><i class="fas fa-clock"></i></span>
+                        </div>
+                        <div class="hero-buttons">
+                            <button class="btn-play">
+                                <i class="fas fa-play"></i> Watch Now
+                            </button>
+                            <button class="btn-more">
+                                <i class="fas fa-plus"></i> Add to List
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="trailer-section">
+                    <h3>Trailer</h3>
+                    <div class="trailer-container">
+                        <iframe src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
 </html> 

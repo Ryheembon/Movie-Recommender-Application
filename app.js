@@ -253,9 +253,15 @@ function addToWatchlist(movieId) {
 // Handle Search
 async function handleSearch() {
     const query = searchInput.value.trim();
-    if (!query) return;
+    console.log('Search query:', query);
+    
+    if (!query) {
+        console.log('Empty search query');
+        return;
+    }
 
     try {
+        console.log('Starting search...');
         // Show loading state
         const searchResults = document.createElement('section');
         searchResults.className = 'content-row';
@@ -274,8 +280,11 @@ async function handleSearch() {
         // Add new search results section
         document.querySelector('main').prepend(searchResults);
 
+        // Fetch search results
+        console.log('Fetching results from API...');
         const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1`);
         const data = await response.json();
+        console.log('Search results:', data);
         
         if (data.results.length === 0) {
             searchResults.innerHTML = `

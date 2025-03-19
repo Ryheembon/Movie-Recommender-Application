@@ -253,7 +253,7 @@ body {
 }
 
 .modal-close {
-    position: absolute;
+    position: fixed;
     top: 1rem;
     right: 1rem;
     background: none;
@@ -262,6 +262,14 @@ body {
     font-size: 2rem;
     cursor: pointer;
     z-index: 1001;
+    padding: 0.5rem;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: background-color 0.3s ease;
+}
+
+.modal-close:hover {
+    background-color: rgba(0, 0, 0, 0.8);
 }
 
 .movie-details {
@@ -324,6 +332,8 @@ body {
 .trailer-section {
     margin-top: 2rem;
     width: 100%;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 2rem;
 }
 
 .trailer-section h3 {

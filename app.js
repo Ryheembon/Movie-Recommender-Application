@@ -685,6 +685,12 @@ async function showMovieDetails(movieId) {
             </div>
         `;
 
+        // Add close button functionality
+        const closeBtn = elements.modalContent.querySelector('.modal-close');
+        closeBtn.addEventListener('click', () => {
+            elements.modal.classList.remove('active');
+        });
+
     } catch (error) {
         console.error('Error showing movie details:', error);
         elements.modalContent.innerHTML = `

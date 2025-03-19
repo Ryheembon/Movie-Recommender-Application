@@ -36,6 +36,13 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModal();
         }
     });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeModal();
+        }
+    });
 });
 
 // Scroll Handler
@@ -174,7 +181,7 @@ async function showMovieDetails(movieId) {
         const trailerKey = trailer ? trailer.key : null;
 
         modal.innerHTML = `
-            <button class="modal-close">&times;</button>
+            <button class="modal-close" aria-label="Close modal">&times;</button>
             <div class="modal-content">
                 <div class="movie-details">
                     <div class="movie-header">
@@ -224,6 +231,11 @@ async function showMovieDetails(movieId) {
 function closeModal() {
     modal.classList.remove('active');
     document.body.style.overflow = 'auto';
+    // Remove the iframe to stop video playback
+    const iframe = modal.querySelector('iframe');
+    if (iframe) {
+        iframe.src = '';
+    }
 }
 
 // Play Movie

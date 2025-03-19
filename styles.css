@@ -5,10 +5,18 @@
     box-sizing: border-box;
 }
 
+:root {
+    --primary-color: #2C3E50;
+    --accent-color: #3498DB;
+    --text-color: #ffffff;
+    --background-color: #1a1a1a;
+    --hover-color: #2980B9;
+}
+
 body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
-    background-color: #141414;
-    color: #ffffff;
+    background-color: var(--background-color);
+    color: var(--text-color);
     line-height: 1.5;
 }
 
@@ -28,15 +36,19 @@ body {
 }
 
 .navbar.scrolled {
-    background-color: #141414;
+    background-color: var(--background-color);
 }
 
 .logo {
-    height: 25px;
+    color: var(--accent-color);
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .nav-right a {
-    color: #ffffff;
+    color: var(--text-color);
     text-decoration: none;
     margin-left: 20px;
     font-size: 14px;
@@ -45,20 +57,19 @@ body {
 
 .nav-right a:hover,
 .nav-right a.active {
-    color: #b3b3b3;
+    color: var(--accent-color);
 }
 
 /* Hero Section */
 .hero {
     height: 80vh;
-    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
-                url('https://images.unsplash.com/photo-1478720568477-152d9b164e26?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+                url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
     background-size: cover;
     background-position: center;
     display: flex;
     align-items: center;
     padding: 0 4%;
-    margin-top: 0;
 }
 
 .hero-content {
@@ -68,12 +79,13 @@ body {
 .hero-content h1 {
     font-size: 3.5rem;
     margin-bottom: 1rem;
+    color: var(--accent-color);
 }
 
 .hero-content p {
     font-size: 1.2rem;
     margin-bottom: 1.5rem;
-    color: #ffffff;
+    color: var(--text-color);
 }
 
 .hero-buttons {
@@ -95,18 +107,21 @@ body {
 }
 
 .btn-play {
-    background-color: #ffffff;
-    color: #000000;
+    background-color: var(--accent-color);
+    color: var(--text-color);
 }
 
 .btn-more {
-    background-color: rgba(109, 109, 110, 0.7);
-    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-color);
 }
 
-.btn-play:hover,
+.btn-play:hover {
+    background-color: var(--hover-color);
+}
+
 .btn-more:hover {
-    opacity: 0.8;
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
 /* Content Rows */
@@ -117,6 +132,7 @@ body {
 .content-row h2 {
     font-size: 1.5rem;
     margin-bottom: 1rem;
+    color: var(--accent-color);
 }
 
 .movie-grid {

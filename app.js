@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Load user preferences
         loadUserPreferences();
 
-        // Fetch different movies for each section
+        // Fetch different movies for each section with random pages
         const [trendingMovies, popularMovies, newReleases, recommendedMovies] = await Promise.all([
             fetchMovies('/trending/movie/week'),
             fetchMovies('/movie/popular'),
@@ -37,12 +37,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             fetchMovies('/movie/top_rated')
         ]);
 
-        // Display movies for each section
+        // Display movies for each section (take only 6 movies from each shuffled array)
         const sections = document.querySelectorAll('.content-row');
-        sections[0].querySelector('.movie-grid').innerHTML = trendingMovies.map(createMovieCard).join('');
-        sections[1].querySelector('.movie-grid').innerHTML = popularMovies.map(createMovieCard).join('');
-        sections[2].querySelector('.movie-grid').innerHTML = newReleases.map(createMovieCard).join('');
-        sections[3].querySelector('.movie-grid').innerHTML = recommendedMovies.map(createMovieCard).join('');
+        sections[0].querySelector('.movie-grid').innerHTML = trendingMovies.slice(0, 6).map(createMovieCard).join('');
+        sections[1].querySelector('.movie-grid').innerHTML = popularMovies.slice(0, 6).map(createMovieCard).join('');
+        sections[2].querySelector('.movie-grid').innerHTML = newReleases.slice(0, 6).map(createMovieCard).join('');
+        sections[3].querySelector('.movie-grid').innerHTML = recommendedMovies.slice(0, 6).map(createMovieCard).join('');
 
         // Add click events to all movie cards
         document.querySelectorAll('.movie-card').forEach(card => {
@@ -253,21 +253,34 @@ async function fetchMoviesWithCache(endpoint, params = {}, cacheKey) {
     }
 }
 
-// Fetch movies from TMDb API
+// Fetch movies from TMDb API with random page selection
 async function fetchMovies(endpoint, params = {}) {
     try {
+        // Get a random page between 1 and 20
+        const randomPage = Math.floor(Math.random() * 20) + 1;
+        
         const queryParams = new URLSearchParams({
             api_key: config.API_KEY,
             language: 'en-US',
+            page: randomPage,
             ...params
         });
+        
+        console.log(`Fetching movies from page ${randomPage}`);
         
         const response = await fetch(`${config.BASE_URL}${endpoint}?${queryParams}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        return data.results || [];
+        
+        if (!data.results || data.results.length === 0) {
+            console.warn(`No results found for endpoint: ${endpoint}`);
+            return [];
+        }
+        
+        // Shuffle the results before returning
+        return shuffleArray(data.results);
     } catch (error) {
         console.error('Error fetching movies:', error);
         return [];
@@ -618,7 +631,7 @@ async function showMovieDetails(movieId) {
     try {
         elements.modalContent.innerHTML = `
             <div class="loading">
-                <i class="fas fa-spinner"></i>
+                <i class="fas fa-spinner fa-spin"></i>
                 <p>Loading movie details...</p>
             </div>
         `;
@@ -638,6 +651,7 @@ async function showMovieDetails(movieId) {
             : 'https://placehold.co/500x750/1A1B26/FFFFFF?text=No+Image';
 
         elements.modalContent.innerHTML = `
+            <button class="modal-close">&times;</button>
             <div class="movie-details">
                 <div class="movie-header">
                     <img src="${posterPath}" 
@@ -651,6 +665,7 @@ async function showMovieDetails(movieId) {
                         <div class="movie-stats">
                             <span><i class="fas fa-star"></i> ${movieData.vote_average ? movieData.vote_average.toFixed(1) : 'N/A'}</span>
                             <span><i class="fas fa-clock"></i> ${movieData.runtime ? movieData.runtime + ' min' : 'N/A'}</span>
+                            ${movieData.genres ? `<span><i class="fas fa-film"></i> ${movieData.genres.map(g => g.name).join(', ')}</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -659,9 +674,7 @@ async function showMovieDetails(movieId) {
                         <h3>Watch Trailer</h3>
                         <div class="trailer-container">
                             <iframe 
-                                width="100%" 
-                                height="315" 
-                                src="https://www.youtube.com/embed/${trailer.key}" 
+                                src="https://www.youtube.com/embed/${trailer.key}?rel=0" 
                                 frameborder="0" 
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                                 allowfullscreen>
@@ -675,6 +688,7 @@ async function showMovieDetails(movieId) {
     } catch (error) {
         console.error('Error showing movie details:', error);
         elements.modalContent.innerHTML = `
+            <button class="modal-close">&times;</button>
             <div class="error-message">
                 <i class="fas fa-exclamation-circle"></i>
                 <p>Error loading movie details. Please try again.</p>
@@ -1312,4 +1326,277 @@ style.textContent = `
         font-size: 1.2rem;
     }
 `;
-document.head.appendChild(style); 
+document.head.appendChild(style);
+
+// Navigation functionality
+function setupNavigation() {
+    const navLinks = document.querySelectorAll('.nav-right a');
+    const sections = {
+        'Home': loadHomeContent,
+        'Movies': loadMoviesContent,
+        'TV Series': loadTVSeriesContent,
+        'New & Popular': loadNewAndPopularContent,
+        'My List': loadMyListContent
+    };
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // Remove active class from all links
+            navLinks.forEach(l => l.classList.remove('active'));
+            // Add active class to clicked link
+            link.classList.add('active');
+            
+            // Get the section name from the link text
+            const section = link.textContent.trim();
+            
+            // Hide all content rows
+            document.querySelectorAll('.content-row').forEach(row => {
+                row.style.display = 'none';
+            });
+            
+            // Show loading indicator
+            elements.loadingIndicator.style.display = 'flex';
+            
+            // Load the corresponding content
+            if (sections[section]) {
+                sections[section]();
+            }
+        });
+    });
+}
+
+// Home content
+async function loadHomeContent() {
+    try {
+        const [trendingMovies, popularMovies, newReleases, recommendedMovies] = await Promise.all([
+            fetchMovies('/trending/movie/week'),
+            fetchMovies('/movie/popular'),
+            fetchMovies('/movie/now_playing'),
+            fetchMovies('/movie/top_rated')
+        ]);
+
+        // Show all sections
+        document.querySelectorAll('.content-row').forEach(row => {
+            row.style.display = 'block';
+        });
+
+        // Update content
+        const sections = document.querySelectorAll('.content-row');
+        sections[0].querySelector('.movie-grid').innerHTML = trendingMovies.slice(0, 6).map(createMovieCard).join('');
+        sections[1].querySelector('.movie-grid').innerHTML = popularMovies.slice(0, 6).map(createMovieCard).join('');
+        sections[2].querySelector('.movie-grid').innerHTML = newReleases.slice(0, 6).map(createMovieCard).join('');
+        sections[3].querySelector('.movie-grid').innerHTML = recommendedMovies.slice(0, 6).map(createMovieCard).join('');
+
+        // Add click events to movie cards
+        document.querySelectorAll('.movie-card').forEach(card => {
+            card.addEventListener('click', () => showMovieDetails(card.dataset.movieId));
+        });
+
+        // Setup navigation for each section
+        sections.forEach(section => setupSectionNavigation(section));
+    } catch (error) {
+        console.error('Error loading home content:', error);
+        showError('Error loading content. Please try again.');
+    } finally {
+        elements.loadingIndicator.style.display = 'none';
+    }
+}
+
+// Movies content
+async function loadMoviesContent() {
+    try {
+        const [actionMovies, dramaMovies, comedyMovies, thrillerMovies] = await Promise.all([
+            fetchMovies('/discover/movie', { with_genres: 28 }), // Action
+            fetchMovies('/discover/movie', { with_genres: 18 }), // Drama
+            fetchMovies('/discover/movie', { with_genres: 35 }), // Comedy
+            fetchMovies('/discover/movie', { with_genres: 53 })  // Thriller
+        ]);
+
+        // Create sections for different genres
+        const mainContent = document.querySelector('main');
+        mainContent.innerHTML = `
+            <section class="content-row">
+                <h2>Action Movies</h2>
+                <div class="movie-grid">${actionMovies.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+            <section class="content-row">
+                <h2>Drama Movies</h2>
+                <div class="movie-grid">${dramaMovies.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+            <section class="content-row">
+                <h2>Comedy Movies</h2>
+                <div class="movie-grid">${comedyMovies.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+            <section class="content-row">
+                <h2>Thriller Movies</h2>
+                <div class="movie-grid">${thrillerMovies.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+        `;
+
+        // Add click events and navigation
+        document.querySelectorAll('.movie-card').forEach(card => {
+            card.addEventListener('click', () => showMovieDetails(card.dataset.movieId));
+        });
+        document.querySelectorAll('.content-row').forEach(section => setupSectionNavigation(section));
+    } catch (error) {
+        console.error('Error loading movies content:', error);
+        showError('Error loading movies. Please try again.');
+    } finally {
+        elements.loadingIndicator.style.display = 'none';
+    }
+}
+
+// TV Series content
+async function loadTVSeriesContent() {
+    try {
+        const [trendingTV, popularTV, topRatedTV, onTheAirTV] = await Promise.all([
+            fetchMovies('/trending/tv/week'),
+            fetchMovies('/tv/popular'),
+            fetchMovies('/tv/top_rated'),
+            fetchMovies('/tv/on_the_air')
+        ]);
+
+        // Create sections for TV shows
+        const mainContent = document.querySelector('main');
+        mainContent.innerHTML = `
+            <section class="content-row">
+                <h2>Trending TV Shows</h2>
+                <div class="movie-grid">${trendingTV.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+            <section class="content-row">
+                <h2>Popular TV Shows</h2>
+                <div class="movie-grid">${popularTV.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+            <section class="content-row">
+                <h2>Top Rated TV Shows</h2>
+                <div class="movie-grid">${topRatedTV.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+            <section class="content-row">
+                <h2>On The Air</h2>
+                <div class="movie-grid">${onTheAirTV.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+        `;
+
+        // Add click events and navigation
+        document.querySelectorAll('.movie-card').forEach(card => {
+            card.addEventListener('click', () => showMovieDetails(card.dataset.movieId));
+        });
+        document.querySelectorAll('.content-row').forEach(section => setupSectionNavigation(section));
+    } catch (error) {
+        console.error('Error loading TV series content:', error);
+        showError('Error loading TV shows. Please try again.');
+    } finally {
+        elements.loadingIndicator.style.display = 'none';
+    }
+}
+
+// New & Popular content
+async function loadNewAndPopularContent() {
+    try {
+        const [newMovies, popularMovies, upcomingMovies, topRatedMovies] = await Promise.all([
+            fetchMovies('/movie/now_playing'),
+            fetchMovies('/movie/popular'),
+            fetchMovies('/movie/upcoming'),
+            fetchMovies('/movie/top_rated')
+        ]);
+
+        // Create sections for new and popular content
+        const mainContent = document.querySelector('main');
+        mainContent.innerHTML = `
+            <section class="content-row">
+                <h2>New Releases</h2>
+                <div class="movie-grid">${newMovies.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+            <section class="content-row">
+                <h2>Popular Now</h2>
+                <div class="movie-grid">${popularMovies.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+            <section class="content-row">
+                <h2>Coming Soon</h2>
+                <div class="movie-grid">${upcomingMovies.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+            <section class="content-row">
+                <h2>Top Rated</h2>
+                <div class="movie-grid">${topRatedMovies.slice(0, 6).map(createMovieCard).join('')}</div>
+            </section>
+        `;
+
+        // Add click events and navigation
+        document.querySelectorAll('.movie-card').forEach(card => {
+            card.addEventListener('click', () => showMovieDetails(card.dataset.movieId));
+        });
+        document.querySelectorAll('.content-row').forEach(section => setupSectionNavigation(section));
+    } catch (error) {
+        console.error('Error loading new and popular content:', error);
+        showError('Error loading content. Please try again.');
+    } finally {
+        elements.loadingIndicator.style.display = 'none';
+    }
+}
+
+// My List content
+async function loadMyListContent() {
+    try {
+        const watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+        
+        if (watchlist.length === 0) {
+            const mainContent = document.querySelector('main');
+            mainContent.innerHTML = `
+                <div class="empty-list">
+                    <i class="fas fa-list"></i>
+                    <h2>Your List is Empty</h2>
+                    <p>Add movies to your list to watch them later</p>
+                    <button class="btn-play" onclick="loadHomeContent()">Browse Movies</button>
+                </div>
+            `;
+            return;
+        }
+
+        // Fetch details for all movies in the watchlist
+        const watchlistMovies = await Promise.all(
+            watchlist.map(id => 
+                fetch(`${config.BASE_URL}/movie/${id}?api_key=${config.API_KEY}`)
+                    .then(res => res.json())
+            )
+        );
+
+        // Create section for watchlist
+        const mainContent = document.querySelector('main');
+        mainContent.innerHTML = `
+            <section class="content-row">
+                <h2>My List</h2>
+                <div class="movie-grid">${watchlistMovies.map(createMovieCard).join('')}</div>
+            </section>
+        `;
+
+        // Add click events and navigation
+        document.querySelectorAll('.movie-card').forEach(card => {
+            card.addEventListener('click', () => showMovieDetails(card.dataset.movieId));
+        });
+        document.querySelectorAll('.content-row').forEach(section => setupSectionNavigation(section));
+    } catch (error) {
+        console.error('Error loading watchlist:', error);
+        showError('Error loading your list. Please try again.');
+    } finally {
+        elements.loadingIndicator.style.display = 'none';
+    }
+}
+
+// Error display function
+function showError(message) {
+    const mainContent = document.querySelector('main');
+    mainContent.innerHTML = `
+        <div class="error-message">
+            <i class="fas fa-exclamation-circle"></i>
+            <p>${message}</p>
+        </div>
+    `;
+}
+
+// Initialize navigation when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    setupNavigation();
+    loadHomeContent(); // Load home content by default
+}); 

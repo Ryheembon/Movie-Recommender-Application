@@ -25,9 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
     setupInfiniteScroll();
 
     // Search functionality
-    searchButton.addEventListener('click', handleSearch);
+    searchButton.addEventListener('click', () => {
+        console.log('Search button clicked');
+        handleSearch();
+    });
+
     searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSearch();
+        if (e.key === 'Enter') {
+            console.log('Enter key pressed');
+            handleSearch();
+        }
     });
 
     // Modal close functionality
@@ -315,6 +322,14 @@ async function handleSearch() {
         displayMovies(data.results, 'search');
     } catch (error) {
         console.error('Error searching movies:', error);
+        // Show error message to user
+        const searchResults = document.querySelector('.content-row[data-category="search"]');
+        if (searchResults) {
+            searchResults.innerHTML = `
+                <h2>Error searching movies</h2>
+                <p>Please try again later</p>
+            `;
+        }
     }
 }
 

@@ -31,13 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Search functionality
     searchButton.addEventListener('click', () => {
-        console.log('Search button clicked');
         handleSearch();
     });
 
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            console.log('Enter key pressed');
             handleSearch();
         }
     });
@@ -147,10 +145,10 @@ async function loadMovieContent() {
 // Display Movies
 function displayMovies(movies, category) {
     const movieGrid = document.querySelector(`.content-row[data-category="${category}"] .movie-grid`);
-    if (!movieGrid) {
-        console.error(`Movie grid not found for category: ${category}`);
-        return;
-    }
+    if (!movieGrid) return;
+
+    // Clear existing movies
+    movieGrid.innerHTML = '';
 
     movies.forEach(movie => {
         const movieCard = createMovieCard(movie);
@@ -158,7 +156,10 @@ function displayMovies(movies, category) {
     });
 
     // Add fade-in animation
-    document.querySelector(`.content-row[data-category="${category}"]`).classList.add('visible');
+    const contentRow = movieGrid.closest('.content-row');
+    if (contentRow) {
+        contentRow.classList.add('visible');
+    }
 }
 
 // Create Movie Card
@@ -167,14 +168,14 @@ function createMovieCard(movie) {
     card.className = 'movie-card';
     card.innerHTML = `
         <img src="${IMAGE_BASE_URL}/w500${movie.poster_path}" alt="${movie.title}">
-            <div class="movie-info">
-                <h3>${movie.title}</h3>
+        <div class="movie-info">
+            <h3>${movie.title}</h3>
             <p>${movie.release_date.split('-')[0]}</p>
             <div class="movie-buttons">
-                <button onclick="playMovie(${movie.id})">
+                <button onclick="playMovie(${movie.id})" title="Play movie">
                     <i class="fas fa-play"></i>
                 </button>
-                <button onclick="showMovieDetails(${movie.id})">
+                <button onclick="showMovieDetails(${movie.id})" title="View details">
                     <i class="fas fa-info-circle"></i>
                 </button>
             </div>
@@ -462,4 +463,21 @@ document.getElementById('movieModal').addEventListener('click', (e) => {
         e.currentTarget.classList.remove('active');
         document.body.style.overflow = 'auto';
     }
-}); 
+});
+
+// Scroll Category
+function scrollCategory(category, direction) {
+    const movieGrid = document.querySelector(`.content-row[data-category="${category}"] .movie-grid`);
+    if (!movieGrid) return;
+
+    const scrollAmount = 300;
+    const currentScroll = movieGrid.scrollLeft;
+    const newScroll = direction === 'left' 
+        ? currentScroll - scrollAmount 
+        : currentScroll + scrollAmount;
+
+    movieGrid.scrollTo({
+        left: newScroll,
+        behavior: 'smooth'
+    });
+} 

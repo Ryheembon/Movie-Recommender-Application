@@ -166,16 +166,25 @@ function displayMovies(movies, category) {
 function createMovieCard(movie) {
     const card = document.createElement('div');
     card.className = 'movie-card';
+    
+    // Make the entire card clickable
+    card.onclick = (e) => {
+        // Only trigger if the click wasn't on a button
+        if (!e.target.closest('button')) {
+            showMovieDetails(movie.id);
+        }
+    };
+    
     card.innerHTML = `
         <img src="${IMAGE_BASE_URL}/w500${movie.poster_path}" alt="${movie.title}">
         <div class="movie-info">
             <h3>${movie.title}</h3>
             <p>${movie.release_date.split('-')[0]}</p>
             <div class="movie-buttons">
-                <button onclick="playMovie(${movie.id})" title="Play movie">
+                <button onclick="event.stopPropagation(); playMovie(${movie.id})" title="Play movie">
                     <i class="fas fa-play"></i>
                 </button>
-                <button onclick="showMovieDetails(${movie.id})" title="View details">
+                <button onclick="event.stopPropagation(); showMovieDetails(${movie.id})" title="View details">
                     <i class="fas fa-info-circle"></i>
                 </button>
             </div>

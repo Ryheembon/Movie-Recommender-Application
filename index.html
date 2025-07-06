@@ -14,11 +14,11 @@
             <h1>CineStream</h1>
         </div>
         <div class="nav-right">
-            <a href="#" class="active">Home</a>
-            <a href="#">Movies</a>
-            <a href="#">TV Series</a>
-            <a href="#">New & Popular</a>
-            <a href="#">My List</a>
+            <a href="#" class="active" onclick="showAllMovies()">Home</a>
+            <a href="#" onclick="showAllMovies()">Movies</a>
+            <a href="#" onclick="showAllMovies()">TV Series</a>
+            <a href="#" onclick="showAllMovies()">New & Popular</a>
+            <a href="#" onclick="displayFavorites()">My Favorites</a>
             <div class="search-container">
                 <input type="text" class="search-input" placeholder="Search movies & TV shows...">
                 <button class="search-button" title="Search">
@@ -46,22 +46,54 @@
     <main>
         <section class="content-row" data-category="trending">
             <h2>Trending Now</h2>
-            <div class="movie-grid"></div>
+            <div class="category-navigation">
+                <button class="nav-arrow left" onclick="scrollCategory('trending', 'left')" title="Scroll left">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid"></div>
+                <button class="nav-arrow right" onclick="scrollCategory('trending', 'right')" title="Scroll right">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
         </section>
 
         <section class="content-row" data-category="popular">
             <h2>Popular Movies</h2>
-            <div class="movie-grid"></div>
+            <div class="category-navigation">
+                <button class="nav-arrow left" onclick="scrollCategory('popular', 'left')" title="Scroll left">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid"></div>
+                <button class="nav-arrow right" onclick="scrollCategory('popular', 'right')" title="Scroll right">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
         </section>
 
         <section class="content-row" data-category="new">
             <h2>New Releases</h2>
-            <div class="movie-grid"></div>
+            <div class="category-navigation">
+                <button class="nav-arrow left" onclick="scrollCategory('new', 'left')" title="Scroll left">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid"></div>
+                <button class="nav-arrow right" onclick="scrollCategory('new', 'right')" title="Scroll right">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
         </section>
 
         <section class="content-row" data-category="recommended">
             <h2>Recommended for You</h2>
-            <div class="movie-grid"></div>
+            <div class="category-navigation">
+                <button class="nav-arrow left" onclick="scrollCategory('recommended', 'left')" title="Scroll left">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid"></div>
+                <button class="nav-arrow right" onclick="scrollCategory('recommended', 'right')" title="Scroll right">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
         </section>
     </main>
 

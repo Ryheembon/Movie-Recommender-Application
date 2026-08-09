@@ -1,17 +1,14 @@
-# CineMatch - Movie Recommendation App
+# Bonavista - Movie Recommendation App
 
-A modern web application that provides personalized movie recommendations using the TMDb API. Features include movie browsing, search functionality, personalized recommendations, and a watchlist feature.
+A Netflix-style movie browser built with HTML, CSS, and JavaScript using the TMDb API. Created by Ryheem Bonaparte.
 
 ## Features
 
-- 🎬 Browse popular, trending, and top-rated movies
-- 🔍 Real-time movie search
-- 🎯 Personalized movie recommendations based on genre preferences
-- 📱 Responsive design for all devices
-- 🎥 Movie trailers and details
-- 📋 Watchlist functionality
-- 🔄 Offline support with service workers
-- ⚡ Performance optimized with lazy loading and infinite scroll
+- Browse trending, popular, new, and recommended movies
+- Search movies by title
+- View trailers, ratings, and streaming info
+- Save movies to **My Favorites** (stored in your browser with localStorage)
+- Responsive layout with Home + Favorites on mobile
 
 ## Technologies Used
 
@@ -19,40 +16,47 @@ A modern web application that provides personalized movie recommendations using 
 - CSS3
 - JavaScript (ES6+)
 - TMDb API
-- Service Workers for offline support
 
 ## Getting Started
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/cinematch.git
+git clone https://github.com/yourusername/Movies_recommendations.git
+cd Movies_recommendations
 ```
 
 2. Get a TMDb API key:
-   - Go to [TMDb](https://www.themoviedb.org/documentation/api)
+   - Go to [TMDb API Settings](https://www.themoviedb.org/settings/api)
    - Create an account and request an API key
-   - Add your API key to the config object in `index.html`
+   - Copy `config.example.js` to `config.js`
+   - Paste your API key into `config.js`
 
-3. Open `index.html` in your browser or use a local server.
+```bash
+cp config.example.js config.js
+```
+
+3. Open `index.html` in your browser, or use a local server:
+```bash
+python3 -m http.server 8000
+```
+Then visit `http://localhost:8000`
 
 ## Project Structure
 
 ```
-cinematch/
-├── index.html          # Main HTML file
-├── styles.css          # Styles
-├── app.js             # Main JavaScript file
-├── sw.js              # Service Worker
-└── README.md          # Project documentation
+Movies_recommendations/
+├── index.html           # Main page
+├── styles.css           # Styles
+├── app.js               # App logic (browse, search, favorites)
+├── config.example.js    # Example API config (safe to commit)
+├── config.js            # Your real API key (not committed)
+├── movie_app.py         # Optional desktop Tkinter version
+└── README.md
 ```
 
-## Contributing
+## Favorites
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Favorites are saved in the browser with `localStorage` under the key `movieFavorites`. Click the heart on a movie card or use **My Favorites** in the nav to view them.
 
 ## License
 
@@ -60,6 +64,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- [TMDb](https://www.themoviedb.org/) for providing the movie data API
+- [TMDb](https://www.themoviedb.org/) for the movie data API
 - [Font Awesome](https://fontawesome.com/) for icons
-- [Google Fonts](https://fonts.google.com/) for typography 

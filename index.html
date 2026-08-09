@@ -3,25 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="CineStream - A movie streaming platform created by Ryheem Bonaparte">
-    <title>CineStream - Created by Ryheem Bonaparte</title>
+    <meta name="description" content="Bonavista - A movie streaming platform created by Ryheem Bonaparte">
+    <title>Bonavista - Created by Ryheem Bonaparte</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-left">
-            <h1>CineStream</h1>
+            <h1>Bonavista</h1>
         </div>
         <div class="nav-right">
-            <a href="#" class="active" onclick="showAllMovies()">Home</a>
-            <a href="#" onclick="showAllMovies()">Movies</a>
-            <a href="#" onclick="showAllMovies()">TV Series</a>
-            <a href="#" onclick="showAllMovies()">New & Popular</a>
-            <a href="#" onclick="displayFavorites()">My Favorites</a>
+            <a href="#" class="nav-home active" onclick="showHomeView()">Home</a>
+            <a href="#" class="nav-movies nav-desktop" onclick="showMoviesView()">Movies</a>
+            <a href="#" class="nav-tv" onclick="showTVView()" title="TV Series">
+                <span class="nav-text">TV Series</span>
+            </a>
+            <a href="#" class="nav-new nav-desktop" onclick="showNewPopularView()">New & Popular</a>
+            <a href="#" class="nav-genres nav-desktop" onclick="document.getElementById('genreBar').scrollIntoView({behavior:'smooth'})">Genres</a>
+            <a href="#" class="nav-favorites" onclick="displayFavorites()" title="My Favorites">
+                <i class="fas fa-heart" aria-hidden="true"></i>
+                <span>My Favorites</span>
+            </a>
             <div class="search-container">
-                <input type="text" class="search-input" placeholder="Search movies & TV shows...">
-                <button class="search-button" title="Search">
+                <input type="text" class="search-input" placeholder="Search movies & TV shows..." aria-label="Search movies and TV shows">
+                <button class="search-button" title="Search" aria-label="Search">
                     <i class="fas fa-search"></i>
                 </button>
             </div>
@@ -30,11 +36,11 @@
 
     <section class="hero">
         <div class="hero-content">
-            <h1>Welcome to CineStream</h1>
+            <h1>Welcome to Bonavista</h1>
             <p>Discover the best movies and TV shows. Start watching now!</p>
             <div class="hero-buttons">
                 <button class="btn-play">
-                    <i class="fas fa-play"></i> Watch Now
+                    <i class="fas fa-play"></i> Watch Trailer
                 </button>
                 <button class="btn-more">
                     <i class="fas fa-info-circle"></i> More Info
@@ -43,58 +49,10 @@
         </div>
     </section>
 
+    <div id="genreBar" class="genre-bar" aria-label="Browse by genre"></div>
+
     <main>
-        <section class="content-row" data-category="trending">
-            <h2>Trending Now</h2>
-            <div class="category-navigation">
-                <button class="nav-arrow left" onclick="scrollCategory('trending', 'left')" title="Scroll left">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <div class="movie-grid"></div>
-                <button class="nav-arrow right" onclick="scrollCategory('trending', 'right')" title="Scroll right">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </section>
-
-        <section class="content-row" data-category="popular">
-            <h2>Popular Movies</h2>
-            <div class="category-navigation">
-                <button class="nav-arrow left" onclick="scrollCategory('popular', 'left')" title="Scroll left">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <div class="movie-grid"></div>
-                <button class="nav-arrow right" onclick="scrollCategory('popular', 'right')" title="Scroll right">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </section>
-
-        <section class="content-row" data-category="new">
-            <h2>New Releases</h2>
-            <div class="category-navigation">
-                <button class="nav-arrow left" onclick="scrollCategory('new', 'left')" title="Scroll left">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <div class="movie-grid"></div>
-                <button class="nav-arrow right" onclick="scrollCategory('new', 'right')" title="Scroll right">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </section>
-
-        <section class="content-row" data-category="recommended">
-            <h2>Recommended for You</h2>
-            <div class="category-navigation">
-                <button class="nav-arrow left" onclick="scrollCategory('recommended', 'left')" title="Scroll left">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <div class="movie-grid"></div>
-                <button class="nav-arrow right" onclick="scrollCategory('recommended', 'right')" title="Scroll right">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </section>
+        <!-- Content rows are loaded by app.js based on the selected tab -->
     </main>
 
     <div id="movieModal" class="modal">
@@ -135,7 +93,7 @@
     <script src="app.js"></script>
     <footer class="footer">
         <p>Created by Ryheem Bonaparte</p>
-        <p class="copyright">© 2024 All rights reserved</p>
+        <p class="copyright">© 2026 All rights reserved</p>
     </footer>
 </body>
 </html> 

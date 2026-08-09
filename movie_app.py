@@ -10,7 +10,7 @@ import webbrowser  # Add this for opening trailer links
 class MovieRecommenderApp:
     def __init__(self, master):
         self.master = master  
-        master.title("Movie Recommender")
+        master.title("Bonavista")
         master.geometry("600x800")
         
         # Initialize TMDb API
@@ -96,7 +96,7 @@ class MovieRecommenderApp:
         # Title
         title_label = tk.Label(
             main_container,
-            text="Movie Recommender",
+            text="Bonavista",
             font=("Arial", 24, "bold"),
             pady=20
         )

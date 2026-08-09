@@ -3,6 +3,33 @@ const API_KEY = config.API_KEY;
 const BASE_URL = config.BASE_URL;
 const IMAGE_BASE_URL = config.IMAGE_BASE_URL;
 
+const MOVIE_GENRES = [
+    { id: 28, name: 'Action' },
+    { id: 12, name: 'Adventure' },
+    { id: 16, name: 'Animation' },
+    { id: 35, name: 'Comedy' },
+    { id: 80, name: 'Crime' },
+    { id: 18, name: 'Drama' },
+    { id: 14, name: 'Fantasy' },
+    { id: 27, name: 'Horror' },
+    { id: 10749, name: 'Romance' },
+    { id: 878, name: 'Sci-Fi' },
+    { id: 53, name: 'Thriller' }
+];
+
+const TV_GENRES = [
+    { id: 10759, name: 'Action & Adventure' },
+    { id: 16, name: 'Animation' },
+    { id: 35, name: 'Comedy' },
+    { id: 80, name: 'Crime' },
+    { id: 99, name: 'Documentary' },
+    { id: 18, name: 'Drama' },
+    { id: 10751, name: 'Family' },
+    { id: 10765, name: 'Sci-Fi & Fantasy' },
+    { id: 10768, name: 'War & Politics' },
+    { id: 37, name: 'Western' }
+];
+
 // DOM Elements (will be set after DOM loads)
 let navbar, heroSection, heroContent, movieGrids, modal, searchInput, searchButton;
 
@@ -10,8 +37,9 @@ let navbar, heroSection, heroContent, movieGrids, modal, searchInput, searchButt
 let currentPage = 1;
 let isLoading = false;
 let hasMorePages = true;
-let displayedMovies = new Set(); // Track displayed movies to avoid duplicates
-let favorites = JSON.parse(localStorage.getItem('movieFavorites')) || [];
+let displayedMovies = new Set();
+let favorites = [];
+let currentView = 'home'; // home | movies | tv | new | genres | favorites
 
 // Setup Infinite Scroll
 function setupInfiniteScroll() {
@@ -20,13 +48,11 @@ function setupInfiniteScroll() {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if config is loaded
     if (typeof config === 'undefined') {
         console.error('Config not loaded! Make sure config.js is included before app.js');
         return;
     }
-    
-    // Initialize favorites from localStorage
+
     try {
         const storedFavorites = localStorage.getItem('movieFavorites');
         if (storedFavorites) {
@@ -37,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
         favorites = [];
     }
 
-    // Set DOM elements
     navbar = document.querySelector('.navbar');
     heroSection = document.querySelector('.hero');
     heroContent = document.querySelector('.hero-content');
@@ -46,16 +71,15 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput = document.querySelector('.search-input');
     searchButton = document.querySelector('.search-button');
 
+    renderGenreBar('movie');
     loadHeroContent();
-    loadMovieContent();
+    showHomeView();
     handleResize();
     setupInfiniteScroll();
+    window.addEventListener('resize', handleResize);
 
-    // Search functionality
     if (searchButton) {
-        searchButton.addEventListener('click', () => {
-            handleSearch();
-        });
+        searchButton.addEventListener('click', handleSearch);
     }
 
     if (searchInput) {
@@ -66,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Modal close functionality
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal-close') || e.target === modal) {
@@ -75,7 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Close modal with Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
             closeModal();
@@ -83,76 +105,156 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Scroll Handler
-function handleScroll() {
-    // Navbar background on scroll
-    if (window.scrollY > 50) {
-        navbar.classList.add('scrolled');
-    } else {
-        navbar.classList.remove('scrolled');
-    }
+// ---------- Helpers ----------
 
-    // Infinite scroll
-    if (isNearBottom() && !isLoading && hasMorePages) {
-        loadMoreContent();
-    }
+function normalizeItem(item, fallbackType = 'movie') {
+    const mediaType = item.media_type || fallbackType;
+    return {
+        ...item,
+        media_type: mediaType,
+        title: item.title || item.name || 'Untitled',
+        release_date: item.release_date || item.first_air_date || ''
+    };
 }
 
-// Resize Handler
-function handleResize() {
-    // Update hero section height
-    heroSection.style.height = `${window.innerHeight * 0.8}px`;
+function buildContentRows(rows) {
+    return rows.map((row) => `
+        <section class="content-row" data-category="${row.category}">
+            <h2>${row.title}</h2>
+            <div class="category-navigation">
+                <button class="nav-arrow left" onclick="scrollCategory('${row.category}', 'left')" title="Scroll left">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid"></div>
+                <button class="nav-arrow right" onclick="scrollCategory('${row.category}', 'right')" title="Scroll right">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+    `).join('');
 }
 
-// Load Hero Content
+function clearTemporarySections() {
+    document.querySelectorAll(
+        '.content-row[data-category="favorites"], .content-row[data-category="search"], .content-row[data-category="genre"]'
+    ).forEach((section) => section.remove());
+}
+
+function setMainRows(rows) {
+    const main = document.querySelector('main');
+    displayedMovies = new Set();
+    currentPage = 1;
+    hasMorePages = currentView === 'home' || currentView === 'movies';
+    main.innerHTML = buildContentRows(rows);
+}
+
+// ---------- Navigation views ----------
+
+async function showHomeView() {
+    currentView = 'home';
+    clearTemporarySections();
+    setMainRows([
+        { category: 'trending', title: 'Trending Movies' },
+        { category: 'popular', title: 'Popular Movies' },
+        { category: 'new', title: 'New Releases' },
+        { category: 'recommended', title: 'Recommended for You' }
+    ]);
+    updateActiveNavigation('home');
+    renderGenreBar('movie');
+    await loadMovieContent();
+    await loadPersonalizedRecommendations();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function showMoviesView() {
+    currentView = 'movies';
+    clearTemporarySections();
+    setMainRows([
+        { category: 'trending', title: 'Trending Movies' },
+        { category: 'popular', title: 'Popular Movies' },
+        { category: 'new', title: 'Now Playing' },
+        { category: 'recommended', title: 'Top Rated Movies' }
+    ]);
+    updateActiveNavigation('movies');
+    renderGenreBar('movie');
+    await loadMovieContent();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function showTVView() {
+    currentView = 'tv';
+    clearTemporarySections();
+    setMainRows([
+        { category: 'tv-trending', title: 'Trending TV Shows' },
+        { category: 'tv-popular', title: 'Popular TV Shows' },
+        { category: 'tv-top', title: 'Top Rated TV' },
+        { category: 'tv-airing', title: 'Airing Today' }
+    ]);
+    updateActiveNavigation('tv');
+    renderGenreBar('tv');
+    await loadTVContent();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function showNewPopularView() {
+    currentView = 'new';
+    clearTemporarySections();
+    setMainRows([
+        { category: 'new-movies', title: 'New Movies' },
+        { category: 'popular-movies', title: 'Popular Movies' },
+        { category: 'popular-tv', title: 'Popular TV Shows' },
+        { category: 'trending-all', title: 'Trending This Week' }
+    ]);
+    updateActiveNavigation('new');
+    renderGenreBar('movie');
+    await loadNewPopularContent();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Keep old name working for any leftover calls
+function showAllMovies() {
+    showHomeView();
+}
+
+// ---------- Data loaders ----------
+
 async function loadHeroContent() {
     try {
         const response = await fetch(`${BASE_URL}/trending/movie/week?api_key=${API_KEY}&language=en-US&page=1`);
         const data = await response.json();
-        
+
         if (data.results && data.results.length > 0) {
-            const featuredMovie = data.results[0];
-            const heroSection = document.querySelector('.hero');
-            
-            // Set background image with fallback
+            const featuredMovie = normalizeItem(data.results[0], 'movie');
+            const hero = document.querySelector('.hero');
+
             if (featuredMovie.backdrop_path) {
-                heroSection.style.backgroundImage = `linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8)), url(${IMAGE_BASE_URL}/original${featuredMovie.backdrop_path})`;
+                hero.style.backgroundImage = `linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8)), url(${IMAGE_BASE_URL}/w1280${featuredMovie.backdrop_path})`;
             } else if (featuredMovie.poster_path) {
-                heroSection.style.backgroundImage = `linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8)), url(${IMAGE_BASE_URL}/original${featuredMovie.poster_path})`;
-            } else {
-                heroSection.style.backgroundImage = `linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8)), url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI2NzUiIHZpZXdCb3g9IjAgMCAxMjAwIDY3NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjEyMDAiIGhlaWdodD0iNjc1IiBmaWxsPSIjMzMzIi8+CjxwYXRoIGQ9Ik02MDAgMzM3LjVMMzUwIDQ1MEgzNTBMNjAwIDMzNy41TDg1MCA0NTBINzUwTDYwMCAzMzcuNVoiIGZpbGw9IiM2NjYiLz4KPC9zdmc+)`;
+                hero.style.backgroundImage = `linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8)), url(${IMAGE_BASE_URL}/w780${featuredMovie.poster_path})`;
             }
-            
-            // Update hero content with safe data handling
-            const heroContent = document.querySelector('.hero-content');
-            const safeTitle = featuredMovie.title || 'Featured Movie';
-            const safeOverview = featuredMovie.overview || 'Discover amazing movies and TV shows on CineStream.';
-            
-            heroContent.innerHTML = `
-                <h1>${safeTitle}</h1>
-                <p>${safeOverview}</p>
+
+            const content = document.querySelector('.hero-content');
+            content.innerHTML = `
+                <h1>${featuredMovie.title}</h1>
+                <p>${featuredMovie.overview || 'Discover amazing movies and TV shows on Bonavista.'}</p>
                 <div class="hero-buttons">
-                    <button class="btn-play" onclick="playMovie(${featuredMovie.id})">
-                        <i class="fas fa-play"></i> Watch Now
+                    <button class="btn-play" onclick="playMedia(${featuredMovie.id}, 'movie')">
+                        <i class="fas fa-play"></i> Watch Trailer
                     </button>
-                    <button class="btn-more" onclick="showMovieDetails(${featuredMovie.id})">
+                    <button class="btn-more" onclick="showMediaDetails(${featuredMovie.id}, 'movie')">
                         <i class="fas fa-info-circle"></i> More Info
                     </button>
                 </div>
             `;
-            
-            // Add fade-in animation
-            heroContent.classList.add('visible');
+            content.classList.add('visible');
         }
     } catch (error) {
         console.error('Error loading hero content:', error);
     }
 }
 
-// Load Movie Content
 async function loadMovieContent() {
     try {
-        // Make API calls to fetch movie data
         const [trendingResponse, popularResponse, newResponse, recommendedResponse] = await Promise.all([
             fetch(`${BASE_URL}/trending/movie/week?api_key=${API_KEY}&language=en-US&page=1`),
             fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`),
@@ -165,33 +267,102 @@ async function loadMovieContent() {
         const newData = await newResponse.json();
         const recommendedData = await recommendedResponse.json();
 
-        // Display movies for each category
-        if (trendingData.results) {
-            displayMovies(trendingData.results, 'trending');
-        }
-        if (popularData.results) {
-            displayMovies(popularData.results, 'popular');
-        }
-        if (newData.results) {
-            displayMovies(newData.results, 'new');
-        }
-        if (recommendedData.results) {
-            displayMovies(recommendedData.results, 'recommended');
-        }
-
+        if (trendingData.results) displayMedia(trendingData.results, 'trending', 'movie');
+        if (popularData.results) displayMedia(popularData.results, 'popular', 'movie');
+        if (newData.results) displayMedia(newData.results, 'new', 'movie');
+        if (recommendedData.results) displayMedia(recommendedData.results, 'recommended', 'movie');
     } catch (error) {
         console.error('Error loading movie content:', error);
         showLoadingError();
     }
 }
 
-// Show loading error message
-function showLoadingError() {
+async function loadTVContent() {
+    try {
+        const [trendingRes, popularRes, topRes, airingRes] = await Promise.all([
+            fetch(`${BASE_URL}/trending/tv/week?api_key=${API_KEY}&language=en-US&page=1`),
+            fetch(`${BASE_URL}/tv/popular?api_key=${API_KEY}&language=en-US&page=1`),
+            fetch(`${BASE_URL}/tv/top_rated?api_key=${API_KEY}&language=en-US&page=1`),
+            fetch(`${BASE_URL}/tv/airing_today?api_key=${API_KEY}&language=en-US&page=1`)
+        ]);
+
+        const trendingData = await trendingRes.json();
+        const popularData = await popularRes.json();
+        const topData = await topRes.json();
+        const airingData = await airingRes.json();
+
+        if (trendingData.results) displayMedia(trendingData.results, 'tv-trending', 'tv');
+        if (popularData.results) displayMedia(popularData.results, 'tv-popular', 'tv');
+        if (topData.results) displayMedia(topData.results, 'tv-top', 'tv');
+        if (airingData.results) displayMedia(airingData.results, 'tv-airing', 'tv');
+    } catch (error) {
+        console.error('Error loading TV content:', error);
+        showLoadingError('TV shows');
+    }
+}
+
+async function loadNewPopularContent() {
+    try {
+        const [newMoviesRes, popularMoviesRes, popularTvRes, trendingRes] = await Promise.all([
+            fetch(`${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=1`),
+            fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`),
+            fetch(`${BASE_URL}/tv/popular?api_key=${API_KEY}&language=en-US&page=1`),
+            fetch(`${BASE_URL}/trending/all/week?api_key=${API_KEY}&language=en-US&page=1`)
+        ]);
+
+        const newMovies = await newMoviesRes.json();
+        const popularMovies = await popularMoviesRes.json();
+        const popularTv = await popularTvRes.json();
+        const trending = await trendingRes.json();
+
+        if (newMovies.results) displayMedia(newMovies.results, 'new-movies', 'movie');
+        if (popularMovies.results) displayMedia(popularMovies.results, 'popular-movies', 'movie');
+        if (popularTv.results) displayMedia(popularTv.results, 'popular-tv', 'tv');
+        if (trending.results) {
+            const filtered = trending.results.filter((item) => item.media_type === 'movie' || item.media_type === 'tv');
+            displayMedia(filtered, 'trending-all');
+        }
+    } catch (error) {
+        console.error('Error loading new & popular content:', error);
+        showLoadingError('new & popular titles');
+    }
+}
+
+async function loadPersonalizedRecommendations() {
+    const recommendedGrid = document.querySelector('.content-row[data-category="recommended"] .movie-grid');
+    const recommendedTitle = document.querySelector('.content-row[data-category="recommended"] h2');
+    if (!recommendedGrid) return;
+
+    if (!favorites.length) {
+        if (recommendedTitle) recommendedTitle.textContent = 'Recommended for You';
+        return;
+    }
+
+    try {
+        const seed = favorites[0];
+        const mediaType = seed.media_type || 'movie';
+        const response = await fetch(
+            `${BASE_URL}/${mediaType}/${seed.id}/recommendations?api_key=${API_KEY}&language=en-US&page=1`
+        );
+        const data = await response.json();
+
+        if (data.results && data.results.length > 0) {
+            if (recommendedTitle) {
+                recommendedTitle.textContent = `Because you liked ${seed.title || seed.name || 'your favorites'}`;
+            }
+            displayMedia(data.results, 'recommended', mediaType);
+        }
+    } catch (error) {
+        console.error('Error loading personalized recommendations:', error);
+    }
+}
+
+function showLoadingError(label = 'movies') {
     const mainContent = document.querySelector('main');
     mainContent.innerHTML = `
         <div class="error-message">
             <i class="fas fa-exclamation-triangle"></i>
-            <h2>Unable to load movies</h2>
+            <h2>Unable to load ${label}</h2>
             <p>Please check your internet connection and try again.</p>
             <button class="btn-play" onclick="location.reload()">
                 <i class="fas fa-refresh"></i> Retry
@@ -200,132 +371,183 @@ function showLoadingError() {
     `;
 }
 
-// Filter duplicate movies across categories
-function filterDuplicates(movies) {
-    return movies.filter(movie => {
-        if (!displayedMovies.has(movie.id)) {
-            displayedMovies.add(movie.id);
-            return true;
-        }
-        return false;
-    });
+// ---------- Genres ----------
+
+function renderGenreBar(type = 'movie') {
+    const genreBar = document.getElementById('genreBar');
+    if (!genreBar) return;
+
+    const genres = type === 'tv' ? TV_GENRES : MOVIE_GENRES;
+    genreBar.innerHTML = `
+        <div class="genre-bar-label">Browse by genre:</div>
+        <div class="genre-chips">
+            ${genres.map((genre) => `
+                <button class="genre-chip" onclick="browseGenre(${genre.id}, '${genre.name.replace(/'/g, "\\'")}', '${type}')">
+                    ${genre.name}
+                </button>
+            `).join('')}
+        </div>
+    `;
 }
 
-// Display Movies
-function displayMovies(movies, category) {
+async function browseGenre(genreId, genreName, type = 'movie') {
+    currentView = 'genres';
+    clearTemporarySections();
+    updateActiveNavigation('genres');
+
+    const endpoint = type === 'tv' ? 'tv' : 'movie';
+    const main = document.querySelector('main');
+    main.innerHTML = `
+        <section class="content-row visible" data-category="genre">
+            <h2>${genreName} ${type === 'tv' ? 'TV Shows' : 'Movies'}</h2>
+            <div class="category-navigation">
+                <button class="nav-arrow left" onclick="scrollCategory('genre', 'left')" title="Scroll left">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid"></div>
+                <button class="nav-arrow right" onclick="scrollCategory('genre', 'right')" title="Scroll right">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+    `;
+
+    try {
+        const response = await fetch(
+            `${BASE_URL}/discover/${endpoint}?api_key=${API_KEY}&language=en-US&sort_by=popularity.desc&with_genres=${genreId}&page=1`
+        );
+        const data = await response.json();
+
+        if (!data.results || data.results.length === 0) {
+            main.querySelector('[data-category="genre"]').innerHTML = `
+                <h2>No ${genreName} titles found</h2>
+                <p>Try another genre.</p>
+            `;
+            return;
+        }
+
+        displayMedia(data.results, 'genre', endpoint);
+        window.scrollTo({ top: document.querySelector('main').offsetTop - 80, behavior: 'smooth' });
+    } catch (error) {
+        console.error('Error browsing genre:', error);
+        main.innerHTML = `
+            <div class="error-message">
+                <h2>Could not load ${genreName}</h2>
+                <p>Please try again.</p>
+            </div>
+        `;
+    }
+}
+
+// ---------- Display / cards ----------
+
+function displayMedia(items, category, fallbackType = 'movie') {
     const movieGrid = document.querySelector(`.content-row[data-category="${category}"] .movie-grid`);
-    
+
     if (!movieGrid) {
         console.error(`Movie grid not found for category: ${category}`);
         return;
     }
 
-    // Clear existing movies
     movieGrid.innerHTML = '';
+    const limitedItems = items.slice(0, 12);
 
-    // Limit to 10 movies per category for better performance
-    const limitedMovies = movies.slice(0, 10);
-
-    limitedMovies.forEach(movie => {
-        const movieCard = createMovieCard(movie);
-        movieGrid.appendChild(movieCard);
+    limitedItems.forEach((item) => {
+        const normalized = normalizeItem(item, item.media_type || fallbackType);
+        displayedMovies.add(`${normalized.media_type}-${normalized.id}`);
+        movieGrid.appendChild(createMediaCard(normalized));
     });
 
-    // Add fade-in animation
     const contentRow = movieGrid.closest('.content-row');
     if (contentRow) {
         contentRow.classList.add('visible');
     }
 }
 
-// Create Movie Card
-function createMovieCard(movie) {
+function createMediaCard(item) {
     const card = document.createElement('div');
     card.className = 'movie-card';
-    
-    // Check if movie is in favorites
-    const isFavorite = favorites.some(fav => fav.id === movie.id);
-    
-    // Handle missing poster images
-    const posterUrl = movie.poster_path 
-        ? `${IMAGE_BASE_URL}/w500${movie.poster_path}`
+
+    const mediaType = item.media_type || 'movie';
+    const isFavorite = favorites.some((fav) => fav.id === item.id && (fav.media_type || 'movie') === mediaType);
+
+    const posterUrl = item.poster_path
+        ? `${IMAGE_BASE_URL}/w500${item.poster_path}`
         : 'https://via.placeholder.com/500x750/333/fff?text=No+Image';
-    
-    // Handle missing release date
-    const releaseYear = movie.release_date ? movie.release_date.split('-')[0] : 'N/A';
-    
-    // Clean data for onclick handlers (escape quotes and handle undefined values)
-    const cleanTitle = (movie.title || 'Unknown Title').replace(/'/g, "\\'").replace(/"/g, '\\"');
-    const cleanOverview = (movie.overview || 'No description available').replace(/'/g, "\\'").replace(/"/g, '\\"');
-    const cleanPosterPath = movie.poster_path || '';
-    const cleanReleaseDate = movie.release_date || '';
-    const cleanVoteAverage = movie.vote_average || 0;
-    
-    // Make the entire card clickable
+
+    const releaseYear = item.release_date ? item.release_date.split('-')[0] : 'N/A';
+    const cleanTitle = (item.title || 'Unknown Title').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    const cleanOverview = (item.overview || 'No description available').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    const cleanPosterPath = item.poster_path || '';
+    const cleanReleaseDate = item.release_date || '';
+    const cleanVoteAverage = item.vote_average || 0;
+
     card.onclick = (e) => {
-        // Only trigger if the click wasn't on a button
         if (!e.target.closest('button')) {
-            showMovieDetails(movie.id);
+            showMediaDetails(item.id, mediaType);
         }
     };
-    
+
     card.innerHTML = `
-        <img src="${posterUrl}" alt="${cleanTitle}" onerror="this.src='https://via.placeholder.com/500x750/333/fff?text=No+Image';">
+        <img src="${posterUrl}" alt="${cleanTitle}" loading="lazy" onerror="this.src='https://via.placeholder.com/500x750/333/fff?text=No+Image';">
         <div class="movie-info">
             <h3>${cleanTitle}</h3>
-            <p>${releaseYear}</p>
+            <p>${releaseYear}${mediaType === 'tv' ? ' · TV' : ''}</p>
             <div class="movie-buttons">
-                <button onclick="event.stopPropagation(); playMovie(${movie.id})" title="Play movie">
+                <button onclick="event.stopPropagation(); playMedia(${item.id}, '${mediaType}')" title="Play trailer">
                     <i class="fas fa-play"></i>
                 </button>
-                <button onclick="event.stopPropagation(); showMovieDetails(${movie.id})" title="View details">
+                <button onclick="event.stopPropagation(); showMediaDetails(${item.id}, '${mediaType}')" title="View details">
                     <i class="fas fa-info-circle"></i>
                 </button>
-                <button onclick="event.stopPropagation(); toggleFavorite(${movie.id}, '${cleanTitle}', '${cleanPosterPath}', '${cleanReleaseDate}', '${cleanOverview}', ${cleanVoteAverage})" 
+                <button onclick="event.stopPropagation(); toggleFavorite(${item.id}, '${cleanTitle}', '${cleanPosterPath}', '${cleanReleaseDate}', '${cleanOverview}', ${cleanVoteAverage}, '${mediaType}')"
                         title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}"
-                        class="favorite-btn ${isFavorite ? 'active' : ''}">
+                        class="favorite-btn ${isFavorite ? 'active' : ''}"
+                        data-media-id="${item.id}"
+                        data-media-type="${mediaType}">
                     <i class="fas fa-heart"></i>
                 </button>
             </div>
         </div>
     `;
-    
+
     return card;
 }
 
-// Show Movie Details
-async function showMovieDetails(movieId) {
+// ---------- Details / play ----------
+
+async function showMediaDetails(mediaId, mediaType = 'movie') {
     try {
-        // Show loading state
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
 
-        // Fetch movie details, videos, and watch providers
-        const [movieResponse, providersResponse] = await Promise.all([
-            fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&language=en-US&append_to_response=videos`),
-            fetch(`${BASE_URL}/movie/${movieId}/watch/providers?api_key=${API_KEY}`)
+        const type = mediaType === 'tv' ? 'tv' : 'movie';
+        const [mediaResponse, providersResponse] = await Promise.all([
+            fetch(`${BASE_URL}/${type}/${mediaId}?api_key=${API_KEY}&language=en-US&append_to_response=videos`),
+            fetch(`${BASE_URL}/${type}/${mediaId}/watch/providers?api_key=${API_KEY}`)
         ]);
-        
-        const movie = await movieResponse.json();
+
+        const media = await mediaResponse.json();
         const providers = await providersResponse.json();
-        
-        const trailer = movie.videos.results.find(video => video.type === 'Trailer');
+        const normalized = normalizeItem({ ...media, media_type: type }, type);
+
+        const trailer = (media.videos && media.videos.results)
+            ? media.videos.results.find((video) => video.type === 'Trailer')
+            : null;
         const trailerKey = trailer ? trailer.key : null;
 
-        // Get US streaming providers
-        const usProviders = providers.results.US || {};
+        const usProviders = (providers.results && providers.results.US) || {};
         const streamingServices = usProviders.flatrate || [];
         const rentServices = usProviders.rent || [];
         const buyServices = usProviders.buy || [];
 
-        // Create streaming info HTML
         const streamingInfo = `
             <div class="streaming-info">
                 ${streamingServices.length > 0 ? `
                     <div class="streaming-section">
                         <h3><i class="fas fa-play-circle"></i> Stream Now</h3>
                         <div class="provider-list">
-                            ${streamingServices.map(provider => `
+                            ${streamingServices.map((provider) => `
                                 <span class="provider" title="${provider.provider_name}">
                                     <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" alt="${provider.provider_name}">
                                 </span>
@@ -337,7 +559,7 @@ async function showMovieDetails(movieId) {
                     <div class="streaming-section">
                         <h3><i class="fas fa-clock"></i> Rent</h3>
                         <div class="provider-list">
-                            ${rentServices.map(provider => `
+                            ${rentServices.map((provider) => `
                                 <span class="provider" title="${provider.provider_name}">
                                     <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" alt="${provider.provider_name}">
                                 </span>
@@ -349,7 +571,7 @@ async function showMovieDetails(movieId) {
                     <div class="streaming-section">
                         <h3><i class="fas fa-shopping-cart"></i> Buy</h3>
                         <div class="provider-list">
-                            ${buyServices.map(provider => `
+                            ${buyServices.map((provider) => `
                                 <span class="provider" title="${provider.provider_name}">
                                     <img src="https://image.tmdb.org/t/p/original${provider.logo_path}" alt="${provider.provider_name}">
                                 </span>
@@ -365,16 +587,18 @@ async function showMovieDetails(movieId) {
             </div>
         `;
 
-        // Handle missing data safely
-        const posterUrl = movie.poster_path 
-            ? `${IMAGE_BASE_URL}/w500${movie.poster_path}`
+        const posterUrl = normalized.poster_path
+            ? `${IMAGE_BASE_URL}/w500${normalized.poster_path}`
             : 'https://via.placeholder.com/500x750/333/fff?text=No+Image';
-        
-        const cleanTitle = (movie.title || 'Unknown Title').replace(/'/g, "\\'").replace(/"/g, '\\"');
-        const cleanOverview = (movie.overview || 'No description available').replace(/'/g, "\\'").replace(/"/g, '\\"');
-        const cleanPosterPath = movie.poster_path || '';
-        const cleanReleaseDate = movie.release_date || '';
-        const cleanVoteAverage = movie.vote_average || 0;
+
+        const cleanTitle = normalized.title.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        const cleanOverview = (normalized.overview || 'No description available').replace(/'/g, "\\'").replace(/"/g, '\\"');
+        const cleanPosterPath = normalized.poster_path || '';
+        const cleanReleaseDate = normalized.release_date || '';
+        const cleanVoteAverage = normalized.vote_average || 0;
+        const runtimeLabel = type === 'tv'
+            ? `${(media.number_of_seasons || 'N/A')} seasons`
+            : `${media.runtime || 'N/A'} min`;
 
         modal.innerHTML = `
             <button class="modal-close" aria-label="Close modal">&times;</button>
@@ -383,19 +607,20 @@ async function showMovieDetails(movieId) {
                     <div class="movie-header">
                         <img src="${posterUrl}" alt="${cleanTitle}" onerror="this.src='https://via.placeholder.com/500x750/333/fff?text=No+Image';">
                         <div class="movie-info">
-                            <h2>${cleanTitle}</h2>
+                            <h2>${cleanTitle}${type === 'tv' ? ' <span class="media-badge">TV</span>' : ''}</h2>
                             <p class="overview">${cleanOverview}</p>
                             <div class="movie-stats">
-                                <span><i class="fas fa-star"></i> ${cleanVoteAverage.toFixed(1)}</span>
+                                <span><i class="fas fa-star"></i> ${Number(cleanVoteAverage).toFixed(1)}</span>
                                 <span><i class="fas fa-calendar"></i> ${cleanReleaseDate || 'N/A'}</span>
-                                <span><i class="fas fa-clock"></i> ${movie.runtime || 'N/A'} min</span>
+                                <span><i class="fas fa-clock"></i> ${runtimeLabel}</span>
                             </div>
                             <div class="hero-buttons">
-                                <button class="btn-play" onclick="playMovie(${movie.id})">
-                                    <i class="fas fa-play"></i> Watch Now
+                                <button class="btn-play" onclick="playMedia(${normalized.id}, '${type}')">
+                                    <i class="fas fa-play"></i> Watch Trailer
                                 </button>
-                                <button class="btn-more" onclick="toggleFavorite(${movie.id}, '${cleanTitle}', '${cleanPosterPath}', '${cleanReleaseDate}', '${cleanOverview}', ${cleanVoteAverage})">
-                                    <i class="fas fa-heart"></i> <span id="favorite-text-${movie.id}">${favorites.some(fav => fav.id === movie.id) ? 'Remove from Favorites' : 'Add to Favorites'}</span>
+                                <button class="btn-more" onclick="toggleFavorite(${normalized.id}, '${cleanTitle}', '${cleanPosterPath}', '${cleanReleaseDate}', '${cleanOverview}', ${cleanVoteAverage}, '${type}')">
+                                    <i class="fas fa-heart"></i>
+                                    <span id="favorite-text-${normalized.id}">${favorites.some((fav) => fav.id === normalized.id && (fav.media_type || 'movie') === type) ? 'Remove from Favorites' : 'Add to Favorites'}</span>
                                 </button>
                             </div>
                         </div>
@@ -405,9 +630,9 @@ async function showMovieDetails(movieId) {
                         <div class="trailer-section">
                             <h3>Trailer</h3>
                             <div class="trailer-container">
-                                <iframe src="https://www.youtube.com/embed/${trailerKey}" 
-                                        frameborder="0" 
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                <iframe src="https://www.youtube.com/embed/${trailerKey}"
+                                        frameborder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                         allowfullscreen>
                                 </iframe>
                             </div>
@@ -417,163 +642,139 @@ async function showMovieDetails(movieId) {
             </div>
         `;
 
-        // Add event listener for the close button
         const closeButton = modal.querySelector('.modal-close');
         if (closeButton) {
             closeButton.addEventListener('click', closeModal);
         }
     } catch (error) {
-        console.error('Error loading movie details:', error);
+        console.error('Error loading media details:', error);
         modal.innerHTML = `
-            <button class="modal-close" aria-label="Close modal">&times;</button>
+            <button class="modal-close" aria-label="Close modal" onclick="closeModal()">&times;</button>
             <div class="modal-content">
                 <div class="error-message">
                     <i class="fas fa-exclamation-circle"></i>
-                    <p>Error loading movie details. Please try again later.</p>
+                    <p>Error loading details. Please try again later.</p>
                 </div>
             </div>
         `;
     }
 }
 
-// Close Modal
+function showMovieDetails(movieId) {
+    showMediaDetails(movieId, 'movie');
+}
+
 function closeModal() {
     modal.classList.remove('active');
     document.body.style.overflow = 'auto';
-    // Remove the iframe to stop video playback
     const iframe = modal.querySelector('iframe');
     if (iframe) {
         iframe.src = '';
     }
 }
 
-// Play Movie
-async function playMovie(movieId) {
+async function playMedia(mediaId, mediaType = 'movie') {
     try {
-        // Fetch movie details to get the trailer
-        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&language=en-US&append_to_response=videos`);
-        const movie = await response.json();
-        
-        // Find the trailer
-        const trailer = movie.videos.results.find(video => video.type === 'Trailer');
-        
+        const type = mediaType === 'tv' ? 'tv' : 'movie';
+        const response = await fetch(`${BASE_URL}/${type}/${mediaId}?api_key=${API_KEY}&language=en-US&append_to_response=videos`);
+        const media = await response.json();
+        const trailer = media.videos && media.videos.results
+            ? media.videos.results.find((video) => video.type === 'Trailer')
+            : null;
+
         if (trailer) {
-            // Open trailer in a new window
             window.open(`https://www.youtube.com/watch?v=${trailer.key}`, '_blank');
         } else {
-            // If no trailer is available, show movie details instead
-            showMovieDetails(movieId);
+            showMediaDetails(mediaId, type);
         }
     } catch (error) {
-        console.error('Error playing movie:', error);
-        // If there's an error, show movie details instead
-        showMovieDetails(movieId);
+        console.error('Error playing media:', error);
+        showMediaDetails(mediaId, mediaType);
     }
 }
 
-// Add to Watchlist (Legacy function - now uses favorites)
-function addToWatchlist(movieId) {
-    // This will be handled by the favorites system
-    console.log('Adding to watchlist:', movieId);
+function playMovie(movieId) {
+    playMedia(movieId, 'movie');
 }
 
-// Toggle Favorite
-function toggleFavorite(movieId, title, posterPath, releaseDate, overview, voteAverage) {
-    console.log('toggleFavorite called with:', { movieId, title, posterPath, releaseDate, overview, voteAverage });
-    
-    const movieData = {
-        id: movieId,
-        title: title,
-        poster_path: posterPath,
-        release_date: releaseDate,
-        overview: overview,
-        vote_average: voteAverage
-    };
-    
-    const existingIndex = favorites.findIndex(fav => fav.id === movieId);
-    
+// ---------- Favorites ----------
+
+function toggleFavorite(mediaId, title, posterPath, releaseDate, overview, voteAverage, mediaType = 'movie') {
+    const type = mediaType === 'tv' ? 'tv' : 'movie';
+    const existingIndex = favorites.findIndex(
+        (fav) => fav.id === mediaId && (fav.media_type || 'movie') === type
+    );
+
     if (existingIndex > -1) {
-        // Remove from favorites
         favorites.splice(existingIndex, 1);
-        console.log('Removed from favorites:', title);
     } else {
-        // Add to favorites
-        favorites.push(movieData);
-        console.log('Added to favorites:', title);
+        favorites.push({
+            id: mediaId,
+            title: title,
+            poster_path: posterPath,
+            release_date: releaseDate,
+            overview: overview,
+            vote_average: voteAverage,
+            media_type: type
+        });
     }
-    
-    // Save to localStorage with error handling
+
     try {
         localStorage.setItem('movieFavorites', JSON.stringify(favorites));
-        console.log('Favorites saved to localStorage. Total favorites:', favorites.length);
     } catch (error) {
         console.error('Error saving favorites to localStorage:', error);
     }
-    
-    // Update UI
+
     updateFavoriteButtons();
-    
-    // Update modal button text if modal is open
-    const modalFavoriteText = document.getElementById(`favorite-text-${movieId}`);
+
+    const modalFavoriteText = document.getElementById(`favorite-text-${mediaId}`);
     if (modalFavoriteText) {
-        const isFavorite = favorites.some(fav => fav.id === movieId);
+        const isFavorite = favorites.some((fav) => fav.id === mediaId && (fav.media_type || 'movie') === type);
         modalFavoriteText.textContent = isFavorite ? 'Remove from Favorites' : 'Add to Favorites';
     }
-    
-    // If we're currently viewing the favorites page, refresh it
+
     if (document.querySelector('.content-row[data-category="favorites"]')) {
         displayFavorites();
     }
+
+    if (currentView === 'home') {
+        loadPersonalizedRecommendations();
+    }
 }
 
-// Update favorite buttons across all movie cards
 function updateFavoriteButtons() {
-    const favoriteButtons = document.querySelectorAll('.favorite-btn');
-    console.log('Updating favorite buttons. Found', favoriteButtons.length, 'buttons');
-    
-    favoriteButtons.forEach(button => {
+    document.querySelectorAll('.favorite-btn').forEach((button) => {
         try {
-            const onclickAttr = button.getAttribute('onclick');
-            const movieIdMatch = onclickAttr.match(/toggleFavorite\((\d+)/);
-            if (movieIdMatch) {
-                const movieId = parseInt(movieIdMatch[1]);
-                const isFavorite = favorites.some(fav => fav.id === movieId);
-                
-                button.classList.toggle('active', isFavorite);
-                button.title = isFavorite ? 'Remove from favorites' : 'Add to favorites';
-            }
+            const mediaId = parseInt(button.getAttribute('data-media-id'), 10);
+            const mediaType = button.getAttribute('data-media-type') || 'movie';
+            if (!mediaId) return;
+
+            const isFavorite = favorites.some(
+                (fav) => fav.id === mediaId && (fav.media_type || 'movie') === mediaType
+            );
+            button.classList.toggle('active', isFavorite);
+            button.title = isFavorite ? 'Remove from favorites' : 'Add to favorites';
         } catch (error) {
             console.error('Error updating favorite button:', error);
         }
     });
 }
 
-// Display Favorites
 function displayFavorites() {
-    // Remove existing search results and other temporary sections
-    const searchResults = document.querySelector('.content-row[data-category="search"]');
-    if (searchResults) {
-        searchResults.remove();
-    }
-    
-    // Remove existing favorites section
-    const existingFavorites = document.querySelector('.content-row[data-category="favorites"]');
-    if (existingFavorites) {
-        existingFavorites.remove();
-    }
-    
-    // Create favorites section
+    currentView = 'favorites';
+    clearTemporarySections();
+
     const favoritesSection = document.createElement('section');
     favoritesSection.className = 'content-row';
     favoritesSection.setAttribute('data-category', 'favorites');
-    
+
     if (favorites.length === 0) {
         favoritesSection.innerHTML = `
             <h2>My Favorites</h2>
             <div class="empty-favorites">
                 <i class="fas fa-heart"></i>
                 <h3>No favorites yet</h3>
-                <p>Add movies to your favorites to see them here!</p>
+                <p>Add movies or TV shows to your favorites to see them here!</p>
             </div>
         `;
     } else {
@@ -590,92 +791,80 @@ function displayFavorites() {
             </div>
         `;
     }
-    
-    // Add to main content
-    document.querySelector('main').prepend(favoritesSection);
-    
-    // Display favorite movies
+
+    const main = document.querySelector('main');
+    main.innerHTML = '';
+    main.appendChild(favoritesSection);
+
     if (favorites.length > 0) {
-        displayMovies(favorites, 'favorites');
+        displayMedia(favorites, 'favorites');
     }
-    
-    // Update active navigation
+
     updateActiveNavigation('favorites');
-    
-    // Scroll to favorites section
     favoritesSection.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Show all movies (reset to main page)
-function showAllMovies() {
-    // Remove favorites and search sections
-    const favoritesSection = document.querySelector('.content-row[data-category="favorites"]');
-    const searchSection = document.querySelector('.content-row[data-category="search"]');
-    
-    if (favoritesSection) {
-        favoritesSection.remove();
-    }
-    if (searchSection) {
-        searchSection.remove();
-    }
-    
-    // Update active navigation
-    updateActiveNavigation('home');
-    
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+// ---------- Nav active state ----------
 
-// Update active navigation state
 function updateActiveNavigation(section) {
-    document.querySelectorAll('.nav-right a').forEach(link => {
+    document.querySelectorAll('.nav-right a').forEach((link) => {
         link.classList.remove('active');
     });
-    
-    if (section === 'home') {
-        document.querySelector('.nav-right a[onclick="showAllMovies()"]').classList.add('active');
-    } else if (section === 'favorites') {
-        document.querySelector('.nav-right a[onclick="displayFavorites()"]').classList.add('active');
+
+    const map = {
+        home: '.nav-home',
+        movies: '.nav-movies',
+        tv: '.nav-tv',
+        new: '.nav-new',
+        genres: '.nav-genres',
+        favorites: '.nav-favorites'
+    };
+
+    const selector = map[section];
+    if (selector) {
+        const link = document.querySelector(`.nav-right a${selector}`);
+        if (link) link.classList.add('active');
     }
 }
 
-// Handle Search
+// ---------- Search ----------
+
 async function handleSearch() {
     const query = searchInput.value.trim();
-    console.log('Search query:', query);
-    
-    if (!query) {
-        console.log('Empty search query');
-        return;
-    }
-    
+    if (!query) return;
+
     try {
-        console.log('Starting search...');
-        // Show loading state
+        clearTemporarySections();
+
         const searchResults = document.createElement('section');
-        searchResults.className = 'content-row';
+        searchResults.className = 'content-row visible';
         searchResults.setAttribute('data-category', 'search');
         searchResults.innerHTML = `
             <h2>Search Results for "${query}"</h2>
-            <div class="movie-grid"></div>
+            <div class="category-navigation">
+                <button class="nav-arrow left" onclick="scrollCategory('search', 'left')" title="Scroll left">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="movie-grid"></div>
+                <button class="nav-arrow right" onclick="scrollCategory('search', 'right')" title="Scroll right">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
         `;
 
-        // Remove previous search results if any
-        const previousSearch = document.querySelector('.content-row[data-category="search"]');
-        if (previousSearch) {
-            previousSearch.remove();
-        }
+        const main = document.querySelector('main');
+        main.innerHTML = '';
+        main.appendChild(searchResults);
 
-        // Add new search results section
-        document.querySelector('main').prepend(searchResults);
-
-        // Fetch search results
-        console.log('Fetching results from API...');
-        const response = await fetch(`${BASE_URL}/search/movie?api_key=${API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1`);
+        const response = await fetch(
+            `${BASE_URL}/search/multi?api_key=${API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1`
+        );
         const data = await response.json();
-        console.log('Search results:', data);
-        
-        if (data.results.length === 0) {
+        const filtered = (data.results || []).filter(
+            (item) => item.media_type === 'movie' || item.media_type === 'tv'
+        );
+
+        if (filtered.length === 0) {
             searchResults.innerHTML = `
                 <h2>No results found for "${query}"</h2>
                 <p>Try searching for something else</p>
@@ -683,26 +872,45 @@ async function handleSearch() {
             return;
         }
 
-        displayMovies(data.results, 'search');
+        displayMedia(filtered, 'search');
     } catch (error) {
-        console.error('Error searching movies:', error);
-        // Show error message to user
+        console.error('Error searching:', error);
         const searchResults = document.querySelector('.content-row[data-category="search"]');
         if (searchResults) {
             searchResults.innerHTML = `
-                <h2>Error searching movies</h2>
+                <h2>Error searching</h2>
                 <p>Please try again later</p>
             `;
         }
     }
 }
 
-// Check if near bottom of page
+// ---------- Scroll / infinite ----------
+
+function handleScroll() {
+    if (!navbar) return;
+
+    if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+    } else {
+        navbar.classList.remove('scrolled');
+    }
+
+    if ((currentView === 'home' || currentView === 'movies') && isNearBottom() && !isLoading && hasMorePages) {
+        loadMoreContent();
+    }
+}
+
+function handleResize() {
+    if (heroSection) {
+        heroSection.style.height = `${window.innerHeight * 0.8}px`;
+    }
+}
+
 function isNearBottom() {
     return window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100;
 }
 
-// Load more content
 async function loadMoreContent() {
     isLoading = true;
     currentPage++;
@@ -710,56 +918,43 @@ async function loadMoreContent() {
     try {
         const response = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${currentPage}`);
         const data = await response.json();
-        
-        if (data.results.length === 0) {
+
+        if (!data.results || data.results.length === 0) {
             hasMorePages = false;
             return;
         }
 
-        displayMovies(data.results, 'Popular Movies');
+        const movieGrid = document.querySelector('.content-row[data-category="popular"] .movie-grid');
+        if (!movieGrid) return;
+
+        data.results.forEach((movie) => {
+            const normalized = normalizeItem(movie, 'movie');
+            const key = `movie-${normalized.id}`;
+            if (!displayedMovies.has(key)) {
+                displayedMovies.add(key);
+                movieGrid.appendChild(createMediaCard(normalized));
+            }
+        });
     } catch (error) {
         console.error('Error loading more content:', error);
+        currentPage--;
     } finally {
         isLoading = false;
     }
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    loadHeroContent();
-    loadMovieContent();
-    handleResize();
-    setupInfiniteScroll();
-});
-
-// Close modal when clicking the close button
-document.querySelector('.modal-close').addEventListener('click', () => {
-    const modal = document.getElementById('movieModal');
-    modal.classList.remove('active');
-    document.body.style.overflow = 'auto';
-});
-
-// Close modal when clicking outside
-document.getElementById('movieModal').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) {
-        e.currentTarget.classList.remove('active');
-        document.body.style.overflow = 'auto';
-    }
-});
-
-// Scroll Category
 function scrollCategory(category, direction) {
     const movieGrid = document.querySelector(`.content-row[data-category="${category}"] .movie-grid`);
     if (!movieGrid) return;
 
     const scrollAmount = 300;
     const currentScroll = movieGrid.scrollLeft;
-    const newScroll = direction === 'left' 
-        ? currentScroll - scrollAmount 
+    const newScroll = direction === 'left'
+        ? currentScroll - scrollAmount
         : currentScroll + scrollAmount;
 
     movieGrid.scrollTo({
         left: newScroll,
         behavior: 'smooth'
     });
-} 
+}

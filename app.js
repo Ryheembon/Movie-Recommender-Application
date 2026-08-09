@@ -50,6 +50,16 @@ function setupInfiniteScroll() {
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof config === 'undefined') {
         console.error('Config not loaded! Make sure config.js is included before app.js');
+        const main = document.querySelector('main');
+        if (main) {
+            main.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h2>Bonavista needs an API key</h2>
+                    <p>Add your TMDb key in <code>config.js</code>, then refresh.</p>
+                </div>
+            `;
+        }
         return;
     }
 

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Bonavista - A movie streaming platform created by Ryheem Bonaparte">
-    <title>Bonavista - Created by Ryheem Bonaparte</title>
+    <meta name="description" content="Bonavista — discover movies and TV with a clearer view. Created by Ryheem Bonaparte.">
+    <title>Bonavista — by Ryheem Bonaparte</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -19,14 +19,14 @@
             <a href="#" class="nav-tv" onclick="showTVView()" title="TV Series">
                 <span class="nav-text">TV Series</span>
             </a>
-            <a href="#" class="nav-new nav-desktop" onclick="showNewPopularView()">New & Popular</a>
+            <a href="#" class="nav-new nav-desktop" onclick="showNewPopularView()">Fresh Finds</a>
             <a href="#" class="nav-genres nav-desktop" onclick="document.getElementById('genreBar').scrollIntoView({behavior:'smooth'})">Genres</a>
-            <a href="#" class="nav-favorites" onclick="displayFavorites()" title="My Favorites">
-                <i class="fas fa-heart" aria-hidden="true"></i>
-                <span>My Favorites</span>
+            <a href="#" class="nav-favorites" onclick="displayFavorites()" title="Saved">
+                <i class="fas fa-bookmark" aria-hidden="true"></i>
+                <span>Saved</span>
             </a>
             <div class="search-container">
-                <input type="text" class="search-input" placeholder="Search movies & TV shows..." aria-label="Search movies and TV shows">
+                <input type="text" class="search-input" placeholder="Search titles..." aria-label="Search movies and TV shows">
                 <button class="search-button" title="Search" aria-label="Search">
                     <i class="fas fa-search"></i>
                 </button>
@@ -36,14 +36,15 @@
 
     <section class="hero">
         <div class="hero-content">
-            <h1>Welcome to Bonavista</h1>
-            <p>Discover the best movies and TV shows. Start watching now!</p>
+            <h1 class="brand-mark">Bonavista</h1>
+            <p class="hero-tagline">A clearer view of what to watch next.</p>
+            <p class="hero-feature">Loading today’s feature…</p>
             <div class="hero-buttons">
-                <button class="btn-play">
+                <button class="btn-play" type="button">
                     <i class="fas fa-play"></i> Watch Trailer
                 </button>
-                <button class="btn-more">
-                    <i class="fas fa-info-circle"></i> More Info
+                <button class="btn-more" type="button">
+                    <i class="fas fa-info-circle"></i> Details
                 </button>
             </div>
         </div>
@@ -52,7 +53,7 @@
     <div id="genreBar" class="genre-bar" aria-label="Browse by genre"></div>
 
     <main>
-        <!-- Content rows are loaded by app.js based on the selected tab -->
+        <!-- Content rows are loaded by app.js -->
     </main>
 
     <div id="movieModal" class="modal">
@@ -70,11 +71,11 @@
                             <span><i class="fas fa-clock"></i></span>
                         </div>
                         <div class="hero-buttons">
-                            <button class="btn-play">
-                                <i class="fas fa-play"></i> Watch Now
+                            <button class="btn-play" type="button">
+                                <i class="fas fa-play"></i> Watch Trailer
                             </button>
-                            <button class="btn-more">
-                                <i class="fas fa-plus"></i> Add to List
+                            <button class="btn-more" type="button">
+                                <i class="fas fa-bookmark"></i> Save
                             </button>
                         </div>
                     </div>
@@ -82,7 +83,7 @@
                 <div class="trailer-section">
                     <h3>Trailer</h3>
                     <div class="trailer-container">
-                        <iframe src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <iframe src="" title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                     </div>
                 </div>
             </div>
@@ -92,8 +93,8 @@
     <script src="config.js"></script>
     <script src="app.js"></script>
     <footer class="footer">
-        <p>Created by Ryheem Bonaparte</p>
-        <p class="copyright">© 2026 All rights reserved</p>
+        <p>Bonavista · Created by Ryheem Bonaparte</p>
+        <p class="copyright">© 2026 All rights reserved · Not affiliated with any streaming service</p>
     </footer>
 </body>
-</html> 
+</html>

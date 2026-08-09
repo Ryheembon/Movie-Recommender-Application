@@ -154,10 +154,10 @@ async function showHomeView() {
     currentView = 'home';
     clearTemporarySections();
     setMainRows([
-        { category: 'trending', title: 'Trending Movies' },
-        { category: 'popular', title: 'Popular Movies' },
-        { category: 'new', title: 'New Releases' },
-        { category: 'recommended', title: 'Recommended for You' }
+        { category: 'trending', title: 'Worth a look' },
+        { category: 'popular', title: 'Crowd favorites' },
+        { category: 'new', title: 'Just arrived' },
+        { category: 'recommended', title: 'Picked for you' }
     ]);
     updateActiveNavigation('home');
     renderGenreBar('movie');
@@ -170,10 +170,10 @@ async function showMoviesView() {
     currentView = 'movies';
     clearTemporarySections();
     setMainRows([
-        { category: 'trending', title: 'Trending Movies' },
-        { category: 'popular', title: 'Popular Movies' },
-        { category: 'new', title: 'Now Playing' },
-        { category: 'recommended', title: 'Top Rated Movies' }
+        { category: 'trending', title: 'Movies on the rise' },
+        { category: 'popular', title: 'Most watched movies' },
+        { category: 'new', title: 'In theaters vibe' },
+        { category: 'recommended', title: 'Critically loved' }
     ]);
     updateActiveNavigation('movies');
     renderGenreBar('movie');
@@ -185,10 +185,10 @@ async function showTVView() {
     currentView = 'tv';
     clearTemporarySections();
     setMainRows([
-        { category: 'tv-trending', title: 'Trending TV Shows' },
-        { category: 'tv-popular', title: 'Popular TV Shows' },
-        { category: 'tv-top', title: 'Top Rated TV' },
-        { category: 'tv-airing', title: 'Airing Today' }
+        { category: 'tv-trending', title: 'Shows people are talking about' },
+        { category: 'tv-popular', title: 'Must-see series' },
+        { category: 'tv-top', title: 'All-time great TV' },
+        { category: 'tv-airing', title: 'On tonight' }
     ]);
     updateActiveNavigation('tv');
     renderGenreBar('tv');
@@ -200,10 +200,10 @@ async function showNewPopularView() {
     currentView = 'new';
     clearTemporarySections();
     setMainRows([
-        { category: 'new-movies', title: 'New Movies' },
-        { category: 'popular-movies', title: 'Popular Movies' },
-        { category: 'popular-tv', title: 'Popular TV Shows' },
-        { category: 'trending-all', title: 'Trending This Week' }
+        { category: 'new-movies', title: 'Fresh on screen' },
+        { category: 'popular-movies', title: 'Movie crowd-pleasers' },
+        { category: 'popular-tv', title: 'Series everyone knows' },
+        { category: 'trending-all', title: "This week's buzz" }
     ]);
     updateActiveNavigation('new');
     renderGenreBar('movie');
@@ -235,14 +235,15 @@ async function loadHeroContent() {
 
             const content = document.querySelector('.hero-content');
             content.innerHTML = `
-                <h1>${featuredMovie.title}</h1>
-                <p>${featuredMovie.overview || 'Discover amazing movies and TV shows on Bonavista.'}</p>
+                <h1 class="brand-mark">Bonavista</h1>
+                <p class="hero-tagline">A clearer view of what to watch next.</p>
+                <p class="hero-feature">Now featuring <strong>${featuredMovie.title}</strong></p>
                 <div class="hero-buttons">
                     <button class="btn-play" onclick="playMedia(${featuredMovie.id}, 'movie')">
                         <i class="fas fa-play"></i> Watch Trailer
                     </button>
                     <button class="btn-more" onclick="showMediaDetails(${featuredMovie.id}, 'movie')">
-                        <i class="fas fa-info-circle"></i> More Info
+                        <i class="fas fa-info-circle"></i> Details
                     </button>
                 </div>
             `;
@@ -334,7 +335,7 @@ async function loadPersonalizedRecommendations() {
     if (!recommendedGrid) return;
 
     if (!favorites.length) {
-        if (recommendedTitle) recommendedTitle.textContent = 'Recommended for You';
+        if (recommendedTitle) recommendedTitle.textContent = 'Picked for you';
         return;
     }
 
@@ -348,7 +349,7 @@ async function loadPersonalizedRecommendations() {
 
         if (data.results && data.results.length > 0) {
             if (recommendedTitle) {
-                recommendedTitle.textContent = `Because you liked ${seed.title || seed.name || 'your favorites'}`;
+                recommendedTitle.textContent = `Because you saved ${seed.title || seed.name || 'a favorite'}`;
             }
             displayMedia(data.results, 'recommended', mediaType);
         }
@@ -379,7 +380,7 @@ function renderGenreBar(type = 'movie') {
 
     const genres = type === 'tv' ? TV_GENRES : MOVIE_GENRES;
     genreBar.innerHTML = `
-        <div class="genre-bar-label">Browse by genre:</div>
+        <div class="genre-bar-label">Explore by mood</div>
         <div class="genre-chips">
             ${genres.map((genre) => `
                 <button class="genre-chip" onclick="browseGenre(${genre.id}, '${genre.name.replace(/'/g, "\\'")}', '${type}')">
@@ -501,11 +502,11 @@ function createMediaCard(item) {
                     <i class="fas fa-info-circle"></i>
                 </button>
                 <button onclick="event.stopPropagation(); toggleFavorite(${item.id}, '${cleanTitle}', '${cleanPosterPath}', '${cleanReleaseDate}', '${cleanOverview}', ${cleanVoteAverage}, '${mediaType}')"
-                        title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}"
+                        title="${isFavorite ? 'Remove from saved' : 'Save for later'}"
                         class="favorite-btn ${isFavorite ? 'active' : ''}"
                         data-media-id="${item.id}"
                         data-media-type="${mediaType}">
-                    <i class="fas fa-heart"></i>
+                    <i class="fas fa-bookmark"></i>
                 </button>
             </div>
         </div>
@@ -619,8 +620,8 @@ async function showMediaDetails(mediaId, mediaType = 'movie') {
                                     <i class="fas fa-play"></i> Watch Trailer
                                 </button>
                                 <button class="btn-more" onclick="toggleFavorite(${normalized.id}, '${cleanTitle}', '${cleanPosterPath}', '${cleanReleaseDate}', '${cleanOverview}', ${cleanVoteAverage}, '${type}')">
-                                    <i class="fas fa-heart"></i>
-                                    <span id="favorite-text-${normalized.id}">${favorites.some((fav) => fav.id === normalized.id && (fav.media_type || 'movie') === type) ? 'Remove from Favorites' : 'Add to Favorites'}</span>
+                                    <i class="fas fa-bookmark"></i>
+                                    <span id="favorite-text-${normalized.id}">${favorites.some((fav) => fav.id === normalized.id && (fav.media_type || 'movie') === type) ? 'Remove from Saved' : 'Save for later'}</span>
                                 </button>
                             </div>
                         </div>
@@ -730,7 +731,7 @@ function toggleFavorite(mediaId, title, posterPath, releaseDate, overview, voteA
     const modalFavoriteText = document.getElementById(`favorite-text-${mediaId}`);
     if (modalFavoriteText) {
         const isFavorite = favorites.some((fav) => fav.id === mediaId && (fav.media_type || 'movie') === type);
-        modalFavoriteText.textContent = isFavorite ? 'Remove from Favorites' : 'Add to Favorites';
+        modalFavoriteText.textContent = isFavorite ? 'Remove from Saved' : 'Save for later';
     }
 
     if (document.querySelector('.content-row[data-category="favorites"]')) {
@@ -753,7 +754,7 @@ function updateFavoriteButtons() {
                 (fav) => fav.id === mediaId && (fav.media_type || 'movie') === mediaType
             );
             button.classList.toggle('active', isFavorite);
-            button.title = isFavorite ? 'Remove from favorites' : 'Add to favorites';
+            button.title = isFavorite ? 'Remove from saved' : 'Save for later';
         } catch (error) {
             console.error('Error updating favorite button:', error);
         }
@@ -770,16 +771,16 @@ function displayFavorites() {
 
     if (favorites.length === 0) {
         favoritesSection.innerHTML = `
-            <h2>My Favorites</h2>
+            <h2>Saved</h2>
             <div class="empty-favorites">
-                <i class="fas fa-heart"></i>
-                <h3>No favorites yet</h3>
-                <p>Add movies or TV shows to your favorites to see them here!</p>
+                <i class="fas fa-bookmark"></i>
+                <h3>Nothing saved yet</h3>
+                <p>Bookmark movies or shows to build your personal list.</p>
             </div>
         `;
     } else {
         favoritesSection.innerHTML = `
-            <h2>My Favorites (${favorites.length})</h2>
+            <h2>Saved (${favorites.length})</h2>
             <div class="category-navigation">
                 <button class="nav-arrow left" onclick="scrollCategory('favorites', 'left')" title="Scroll left">
                     <i class="fas fa-chevron-left"></i>
